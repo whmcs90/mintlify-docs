@@ -25,11 +25,11 @@
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.wachat.net"
+      "href": "https://crm.wachat.net"
     }
   },
   "api": {
-    "baseUrl": "https://app.wachat.net/api/v1",
+    "baseUrl": "https://crm.wachat.net/api/v1",
     "auth": {
       "method": "bearer"
     },
@@ -37,7 +37,7 @@
       "display": "interactive"
     }
   },
-  "openapi": "openapi.yaml",
+  "openapi": "https://crm.wachat.net/docs/api.json",
   "navigation": {
     "tabs": [
       {
@@ -64,57 +64,7 @@
       },
       {
         "tab": "API Reference",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "api-reference/introduction",
-              "api-reference/account-limits"
-            ]
-          },
-          {
-            "group": "Instances",
-            "pages": [
-              "api-reference/instance-create",
-              "api-reference/instance-list",
-              "api-reference/instance-state",
-              "api-reference/instance-qr-image",
-              "api-reference/instance-profile-picture",
-              "api-reference/instance-logout",
-              "api-reference/instance-delete"
-            ]
-          },
-          {
-            "group": "Messages",
-            "pages": [
-              "api-reference/send-text",
-              "api-reference/send-media",
-              "api-reference/send-button",
-              "api-reference/send-list",
-              "api-reference/send-cta",
-              "api-reference/send-carousel",
-              "api-reference/send-location",
-              "api-reference/send-poll",
-              "api-reference/send-group"
-            ]
-          },
-          {
-            "group": "Contacts & Groups",
-            "pages": [
-              "api-reference/contacts",
-              "api-reference/check-number",
-              "api-reference/groups"
-            ]
-          },
-          {
-            "group": "Webhooks",
-            "pages": [
-              "api-reference/webhooks",
-              "api-reference/webhooks-create",
-              "api-reference/webhooks-delete"
-            ]
-          }
-        ]
+        "openapi": "https://crm.wachat.net/docs/api.json"
       }
     ]
   }
