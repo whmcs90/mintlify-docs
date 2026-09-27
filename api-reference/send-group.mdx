@@ -1,0 +1,95 @@
+---
+title: "POST /send-group — Broadcast a Message to a WhatsApp Group"
+sidebarTitle: "Send to Group"
+description: "Send a text message to a WhatsApp group your instance belongs to using the group's JID. Use GET /groups to look up JIDs for all joined groups."
+---
+
+The `/send-group` endpoint lets you broadcast a text message to any WhatsApp group that your connected instance is a member of. Instead of a phone number, you identify the destination with a group JID — a unique identifier in the format `12036312345678@g.us`. Every member of the group receives the message just as they would any other group chat message. Use this endpoint for announcements, team notifications, event reminders, or any scenario where a single message needs to reach an entire group at once.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send-group
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Finding Your Group JID
+
+Before you can send to a group, you need its JID. Call `GET /groups` with your `instanceName` to retrieve a list of all groups your instance belongs to, including their names and JIDs.
+
+<Note>
+  Your instance must be an active member of the target group. If your instance has been removed from the group or the group no longer exists, the request will fail. Call `GET /groups` to confirm group membership and retrieve the correct JID before sending.
+</Note>
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="groupJid" type="string" required>
+  The unique group JID in the format `12036312345678@g.us`. You can retrieve this from `GET /groups`. Note that this replaces the `number` field used in individual message endpoints.
+</ParamField>
+
+<ParamField body="message" type="string" required>
+  The text content of the message to broadcast to the group. Supports emojis and WhatsApp markdown formatting.
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send-group \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "groupJid": "12036312345678@g.us",
+    "message": "📢 Reminder: Team standup starts in 15 minutes. Join the call at the usual link!"
+  }'
+```
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "groupJid": "12036312345678@g.us",
+  "message": "📢 Reminder: Team standup starts in 15 minutes. Join the call at the usual link!"
+}
+```
+
+```json With Custom Delay
+{
+  "instanceName": "my-instance-01",
+  "groupJid": "12036312345678@g.us",
+  "message": "🎉 New feature just went live — check it out and share your feedback!",
+  "delay": 2000
+}
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the group message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Use WhatsApp markdown to make group announcements more readable. Bold key information with `*asterisks*`, and use line breaks to separate sections. For example: `"*🗓 Event Reminder*\n\nJoin us this Saturday at 10 AM.\n📍 Jl. Sudirman No. 1, Jakarta"`.
+</Tip>
+
+<Warning>
+  Sending unsolicited promotional messages to groups may violate WhatsApp's Terms of Service and can result in your number being banned. Only broadcast messages to groups where members have opted in to receive communications from your instance.
+</Warning>

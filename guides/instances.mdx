@@ -1,0 +1,206 @@
+---
+title: "Create and Manage WhatsApp Instances in Wachat"
+sidebarTitle: "Instances"
+description: "Learn how to create, connect, monitor, and remove WhatsApp instances through the Wachat API — covering the full lifecycle from creation to deletion."
+---
+
+A Wachat **instance** is a dedicated WhatsApp session that your application controls via the API. Each instance maps to one WhatsApp account and goes through a straightforward lifecycle: create it, scan a QR code to connect a phone, use it to send and receive messages, then log out and delete it when it is no longer needed. Understanding how instances work — and specifically which name field to use in API calls — will save you time from the very first request.
+
+<Warning>
+  Always log out an instance before deleting it. Attempting to delete a connected instance returns `409 Conflict`. Skipping this step may leave the WhatsApp session in an inconsistent state.
+</Warning>
+
+## The `apiInstanceName` field
+
+When you create an instance you supply a friendly `instanceName` such as `jakarta_store`. Wachat prefixes that name with a unique tenant identifier and saves the result as `apiInstanceName` — for example, `t1_mq9r2jov_jakarta_store`. **Use `apiInstanceName` in every subsequent API call**, not the friendly name you originally provided. You can retrieve it at any time from the create response, the state endpoint, or the instance list.
+
+## Connect a new instance
+
+<Steps>
+  <Step title="Create the instance">
+    Send a `POST /instance/create` request with at least an `instanceName`. Wachat creates the session and, for Baileys integrations, returns a QR code in the same response.
+
+    <CodeGroup>
+      ```bash cURL
+      curl -X POST https://app.wachat.net/api/v1/instance/create \
+        -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "instanceName": "jakarta_store",
+          "integration": "WHATSAPP-BAILEYS"
+        }'
+      ```
+
+      ```json Response
+      {
+        "success": true,
+        "instance": {
+          "id": 26,
+          "instanceName": "jakarta_store",
+          "displayName": "jakarta_store",
+          "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+          "internalName": "t1_mq9r2jov_jakarta_store",
+          "number": "",
+          "integration": "WHATSAPP-BAILEYS"
+        },
+        "qrcode": {
+          "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+          "imageUrl": "https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store",
+          "liveUrl": "https://app.wachat.net/api/v1/instance/qr/live?instanceName=t1_mq9r2jov_jakarta_store",
+          "pairingCode": "PKRFWHWE",
+          "count": 1
+        },
+        "qrError": null
+      }
+      ```
+    </CodeGroup>
+
+    <Note>
+      Save the `apiInstanceName` value (`t1_mq9r2jov_jakarta_store` in the example above). You will use this string — not the friendly `instanceName` you provided — in all future API calls for this instance.
+    </Note>
+  </Step>
+
+  <Step title="Display the QR code">
+    The create response gives you several ways to display the QR code for Baileys instances:
+
+    - **`qrcode.base64`** — a `data:image/png;base64,...` URI you can drop straight into an `<img>` tag.
+    - **`qrcode.imageUrl`** — a direct PNG endpoint; append `&apiKey=YOUR_KEY` when using it in an `<img>` tag.
+    - **`qrcode.liveUrl`** — an auto-refreshing HTML page suitable for embedding in an `<iframe>`.
+
+    You can also fetch a fresh PNG at any time using the dedicated endpoint:
+
+    ```bash cURL
+    curl "https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store" \
+      -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+      --output qr.png
+    ```
+
+    <Tip>
+      QR codes expire quickly. If your user does not scan in time, refresh the page or call `GET /instance/qr/image` again to get a new code.
+    </Tip>
+  </Step>
+
+  <Step title="Scan with WhatsApp">
+    Open WhatsApp on the target phone, go to **Linked Devices**, tap **Link a Device**, and point the camera at the QR code. WhatsApp will establish the session within a few seconds.
+  </Step>
+
+  <Step title="Verify the connection">
+    After scanning, confirm the instance is connected by checking its state. A `state` of `open` means the session is live and ready to send messages.
+
+    <CodeGroup>
+      ```bash cURL
+      curl "https://app.wachat.net/api/v1/instance/state?instanceName=t1_mq9r2jov_jakarta_store" \
+        -H "Authorization: Bearer $WACHAT_API_TOKEN"
+      ```
+
+      ```json Response
+      {
+        "success": true,
+        "data": {
+          "instance": {
+            "instanceName": "t1_mq9r2jov_jakarta_store",
+            "state": "open"
+          }
+        },
+        "instance": {
+          "instanceName": "jakarta_store",
+          "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+          "internalName": "t1_mq9r2jov_jakarta_store",
+          "state": "open",
+          "profileName": "jakarta_store",
+          "number": "628123456789",
+          "integration": "WHATSAPP-BAILEYS"
+        }
+      }
+      ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## List all instances
+
+To see every instance in your account — along with each one's connection status, phone number, and `apiInstanceName` — call `GET /instance/list`.
+
+```bash cURL
+curl https://app.wachat.net/api/v1/instance/list \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+```
+
+The response returns an `instances` array. Each element includes `apiInstanceName`, `state`, `number`, and optional profile data. Use this endpoint to audit active sessions or recover an `apiInstanceName` you no longer have cached.
+
+## Instance creation options
+
+When creating an instance you can pass additional options to control its behavior:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `instanceName` | string | — | Friendly display name **(required)**. |
+| `integration` | string | `WHATSAPP-BAILEYS` | `WHATSAPP-BAILEYS` or `WHATSAPP-BUSINESS`. |
+| `number` | string | — | Pre-fill the phone number (optional). |
+| `rejectCalls` | boolean | `false` | Auto-reject incoming voice calls. |
+| `ignoreGroups` | boolean | `false` | Suppress group message events. |
+| `alwaysOnline` | boolean | `false` | Keep presence status set to online. |
+| `readMessages` | boolean | `false` | Automatically mark messages as read. |
+
+<Note>
+  `WHATSAPP-BUSINESS` integrations also require `metaToken`, `metaBusinessId`, and `metaPhoneNumberId`. Baileys instances do not use those fields.
+</Note>
+
+## Log out an instance
+
+Logging out severs the WhatsApp session and clears local session credentials without removing the instance record from your account. The phone is unlinked from the Linked Devices list.
+
+```bash cURL
+curl -X DELETE "https://app.wachat.net/api/v1/instance/logout?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+```
+
+A `200` response confirms the session was cleanly terminated. After logging out, the instance state changes from `open` to `close` and you can safely delete it.
+
+## Delete an instance
+
+Deleting an instance removes it permanently from your Wachat account. The instance must be logged out first.
+
+<Warning>
+  You must call `DELETE /instance/logout` before `DELETE /instance/delete`. If the instance is still connected, the delete request returns `409 Conflict`.
+</Warning>
+
+```bash cURL
+curl -X DELETE "https://app.wachat.net/api/v1/instance/delete?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+```
+
+```json Response
+{
+  "success": true,
+  "message": "Instance deleted successfully.",
+  "instance": {
+    "id": 26,
+    "instanceName": "t1_mq9r2jov_jakarta_store",
+    "displayName": "jakarta_store"
+  }
+}
+```
+
+## Instance lifecycle summary
+
+<CardGroup cols={2}>
+  <Card title="Create" icon="plus" href="/api-reference/instance-create">
+    `POST /instance/create` — provision a new WhatsApp session and receive the `apiInstanceName`.
+  </Card>
+  <Card title="QR Code" icon="qrcode" href="/api-reference/instance-qr-image">
+    `GET /instance/qr/image` — fetch a fresh QR code PNG at any time before connection.
+  </Card>
+  <Card title="State" icon="signal" href="/api-reference/instance-state">
+    `GET /instance/state` — check whether an instance is connected (`open`) or disconnected.
+  </Card>
+  <Card title="List" icon="list" href="/api-reference/instance-list">
+    `GET /instance/list` — retrieve all instances with their status and `apiInstanceName` values.
+  </Card>
+  <Card title="Logout" icon="right-from-bracket" href="/api-reference/instance-logout">
+    `DELETE /instance/logout` — gracefully end the WhatsApp session before deletion.
+  </Card>
+  <Card title="Delete" icon="trash" href="/api-reference/instance-delete">
+    `DELETE /instance/delete` — permanently remove a logged-out instance from your account.
+  </Card>
+</CardGroup>

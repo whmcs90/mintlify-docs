@@ -1,0 +1,129 @@
+---
+title: "Authenticate Wachat API Requests with Bearer Tokens"
+sidebarTitle: "Authentication"
+description: "Learn how to find your Wachat API token, attach it to every request as a Bearer token, keep it secure, and resolve common authentication errors."
+---
+
+Every request you make to the Wachat API must include your API token. Wachat uses the standard HTTP Bearer token scheme — you pass the token in the `Authorization` header and the API validates it before processing your request. There are no cookies, sessions, or OAuth flows to manage.
+
+## Find Your API Token
+
+You generate and copy your API token from the Wachat dashboard:
+
+1. Log in to [app.wachat.net](https://app.wachat.net).
+2. Navigate to **Settings → API Keys**.
+3. Copy the token value. Treat it like a password — it grants full API access to your account.
+
+<Note>
+  If you rotate or regenerate your token, update it in every environment where you have deployed it. Old tokens stop working immediately after rotation.
+</Note>
+
+## Pass the Token in Every Request
+
+Add the token to the `Authorization` header using the `Bearer` scheme. The header format is always:
+
+```
+Authorization: Bearer <your-token>
+```
+
+Here is how to do that in the most common HTTP clients:
+
+<CodeGroup>
+
+```bash curl
+curl https://app.wachat.net/api/v1/account/limits \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Accept: application/json"
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch(
+  "https://app.wachat.net/api/v1/account/limits",
+  {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${process.env.WACHAT_API_TOKEN}`,
+      Accept: "application/json",
+    },
+  }
+);
+
+const data = await response.json();
+console.log(data);
+```
+
+```python Python (requests)
+import os
+import requests
+
+headers = {
+    "Authorization": f"Bearer {os.environ['WACHAT_API_TOKEN']}",
+    "Accept": "application/json",
+}
+
+response = requests.get(
+    "https://app.wachat.net/api/v1/account/limits",
+    headers=headers,
+)
+
+print(response.json())
+```
+
+</CodeGroup>
+
+## Security Best Practices
+
+Exposing your API token gives anyone who finds it full control over your Wachat account. Follow these rules to keep it safe:
+
+<Warning>
+  Never embed your API token in client-side JavaScript, mobile app binaries, public GitHub repositories, or log files. Treat any accidental exposure as a compromise and rotate the token immediately.
+</Warning>
+
+- **Use environment variables.** Read the token from `process.env.WACHAT_API_TOKEN` (Node.js), `os.environ['WACHAT_API_TOKEN']` (Python), or your platform's equivalent. Never hard-code the value in source files.
+- **Keep it server-side.** All Wachat API calls should originate from your backend. A browser or mobile app should never hold the token directly.
+- **Use a secrets manager in production.** Tools like AWS Secrets Manager, HashiCorp Vault, or your hosting platform's built-in secrets store are purpose-built for this.
+- **Add `.env` to `.gitignore`.** If you use a `.env` file locally, make sure it is excluded from version control.
+- **Rotate on exposure.** If you suspect the token has been leaked, go to **Settings → API Keys** and regenerate it right away.
+
+## Common Authentication Errors
+
+<AccordionGroup>
+  <Accordion title="401 — Missing or Invalid API Key">
+    Wachat returns `401 Unauthorized` when the `Authorization` header is absent, malformed, or contains an incorrect token.
+
+    **How to fix it:**
+    - Confirm the header is spelled correctly: `Authorization` (not `authentication` or `auth`).
+    - Check that the scheme is `Bearer` followed by a single space and the token.
+    - Print the token value in your terminal (`echo $WACHAT_API_TOKEN`) to confirm it is not empty or truncated.
+    - Make sure you are using the token for the correct account and environment.
+
+    ```json
+    HTTP/1.1 401 Unauthorized
+
+    {
+      "message": "Missing or invalid API key."
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="403 — Subscription Restriction">
+    Wachat returns `403 Forbidden` when your token is valid but your current subscription plan does not allow the action you are trying to perform.
+
+    **How to fix it:**
+    - Call `GET /account/limits` to check your plan, subscription status, and feature flags.
+    - Verify that `subscription.hasAccess` is `true` and `subscription.isExpired` is `false`.
+    - If you have hit a resource limit (e.g., maximum instances), upgrade your plan or remove unused resources before retrying.
+
+    ```json
+    HTTP/1.1 403 Forbidden
+
+    {
+      "message": "Subscription restriction prevented this action."
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  The **API Reference** playground accepts your Bearer token directly in the authentication field at the top of the page. You can use it to test endpoints and debug auth issues without writing any code.
+</Tip>

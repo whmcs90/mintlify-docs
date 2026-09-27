@@ -1,0 +1,93 @@
+---
+title: "POST /send/text — Send a WhatsApp Text Message"
+sidebarTitle: "Send Text"
+description: "Send a plain text message to any WhatsApp number using your connected instance. Supports emojis, markdown formatting, and optional typing simulation."
+---
+
+The `/send/text` endpoint is the most fundamental building block of the Wachat API. Use it to deliver plain-text messages — greetings, notifications, follow-ups, or anything else that fits in a WhatsApp chat bubble — to a recipient identified by their phone number. Wachat automatically simulates a human-like typing delay before sending, so messages feel natural rather than bot-generated.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/text
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header. You can find your API token in the Wachat dashboard under **Settings → API Keys**.
+
+<Note>
+  Your `instanceName` must be the `apiInstanceName` value returned by `POST /instance/create` — for example, `t1_mq9r2jov_jakarta_store`. Using the friendly display name will result in a 404 error.
+</Note>
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign, spaces, or dashes. For example, `628123456789` for an Indonesian number.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Must be set to `"text"`. This field explicitly identifies the message category.
+</ParamField>
+
+<ParamField body="message" type="string" required>
+  The text content of the message. Supports emojis and WhatsApp markdown — wrap text in `*asterisks*` for bold, `_underscores_` for italic, and `~tildes~` for strikethrough.
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds before the message is sent. If omitted, Wachat uses a random delay between 3,000 ms and 5,000 ms to mimic natural human typing rhythm.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send/text \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"instanceName": "my-instance-01", "number": "628123456789", "type": "text", "message": "Hello from Wachat!"}'
+```
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "text",
+  "message": "Hello from Wachat!"
+}
+```
+
+```json With Custom Delay
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "text",
+  "message": "Your order has been confirmed! 🎉",
+  "delay": 1500
+}
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms that the message was accepted and queued for delivery. The actual delivery happens asynchronously — set up a webhook to track delivery status updates.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Use WhatsApp markdown in your `message` field to highlight important information. For example, `"Your OTP is *483920*. It expires in _5 minutes_."` renders with bold and italic formatting inside WhatsApp.
+</Tip>
+
+<Warning>
+  Always verify that a phone number is registered on WhatsApp before sending messages by calling `GET /check-number`. Sending to unregistered numbers wastes your quota and may affect your instance's quality rating.
+</Warning>

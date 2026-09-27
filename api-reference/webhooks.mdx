@@ -1,0 +1,119 @@
+---
+title: "GET /webhooks — List Configured Webhook Endpoints"
+sidebarTitle: "List Webhooks"
+description: "Retrieve all webhook endpoints registered on your Wachat account, with optional filtering by instance, including status and event subscriptions."
+---
+
+The `/webhooks` endpoint returns every webhook endpoint configured on your Wachat account. You can optionally narrow the results to webhooks associated with a specific instance by passing the `instanceName` query parameter. Use this endpoint to audit your webhook configuration, verify that the correct events are subscribed, and confirm which endpoints are currently enabled or disabled.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string">
+  Filter the results to webhooks scoped to a specific instance. Pass the `apiInstanceName` value (e.g. `t1_mq9r2jov_jakarta_store`). Omit this parameter to return all webhooks across every instance in your account.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the request completed successfully.
+</ResponseField>
+
+<ResponseField name="count" type="integer">
+  The total number of webhook records returned in this response.
+</ResponseField>
+
+<ResponseField name="webhooks" type="array">
+  Array of `WebhookSubscription` objects.
+
+  <Expandable title="WebhookSubscription fields">
+    <ResponseField name="id" type="integer">
+      The unique numeric ID of the webhook. Use this value when updating or deleting the webhook.
+    </ResponseField>
+    <ResponseField name="name" type="string | null">
+      Optional human-readable label you assigned to this webhook (e.g. `"Production webhook"`).
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      The HTTPS endpoint URL that Wachat delivers event payloads to.
+    </ResponseField>
+    <ResponseField name="events" type="array">
+      List of event types this webhook is subscribed to (e.g. `["messages.upsert", "connection.update"]`). `["*"]` means all events.
+    </ResponseField>
+    <ResponseField name="enabled" type="boolean">
+      `true` when the webhook is active and will receive event deliveries. `false` means deliveries are paused.
+    </ResponseField>
+    <ResponseField name="secret" type="string">
+      The webhook signing secret, **masked** in list responses (e.g. `whsec_••••abcdef`). The full secret is only returned when you create or update the webhook.
+    </ResponseField>
+    <ResponseField name="instance" type="object | null">
+      The instance this webhook is scoped to, or `null` if the webhook receives events from all instances.
+
+      <Expandable title="instance fields">
+        <ResponseField name="instanceName" type="string">
+          Display name of the instance (e.g. `jakarta_store`).
+        </ResponseField>
+        <ResponseField name="displayName" type="string">
+          Alias for `instanceName`.
+        </ResponseField>
+        <ResponseField name="apiInstanceName" type="string">
+          Unique API identifier for the instance (e.g. `t1_mq9r2jov_jakarta_store`).
+        </ResponseField>
+        <ResponseField name="internalName" type="string">
+          Same value as `apiInstanceName`.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of when this webhook was created.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp of the most recent update to this webhook.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL — all webhooks
+curl --request GET \
+  --url "https://app.wachat.net/api/v1/webhooks" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+```bash cURL — filter by instance
+curl --request GET \
+  --url "https://app.wachat.net/api/v1/webhooks?instanceName=t1_mq9r2jov_jakarta_store" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "success": true,
+  "count": 1,
+  "webhooks": [
+    {
+      "id": 12,
+      "name": "Production webhook",
+      "url": "https://example.com/wachat/webhook",
+      "events": ["messages.upsert", "connection.update"],
+      "enabled": true,
+      "secret": "whsec_••••abcdef",
+      "instance": {
+        "instanceName": "jakarta_store",
+        "displayName": "jakarta_store",
+        "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+        "internalName": "t1_mq9r2jov_jakarta_store"
+      },
+      "createdAt": "2026-06-13T08:00:00.000Z",
+      "updatedAt": "2026-06-13T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+<Note>
+  The `secret` field is always masked in list responses. If you need to rotate or retrieve the full secret, create a new webhook or update the existing one via `POST /webhooks`.
+</Note>

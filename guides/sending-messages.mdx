@@ -1,0 +1,153 @@
+---
+title: "Send WhatsApp Messages with the Wachat API"
+sidebarTitle: "Sending Messages"
+description: "Explore every message type Wachat supports — text, media, buttons, carousels, polls, and more — and learn how to send your first message in minutes."
+---
+
+Wachat gives you a dedicated endpoint for each WhatsApp message type, so you can match the exact format to your use case — whether that is a simple text notification, a rich media attachment, an interactive button menu, or a scrollable product carousel. Every send request follows the same pattern: authenticate with your API token, specify your connected instance, provide the recipient's phone number, and include the message payload. All endpoints also support an optional `delay` parameter that simulates human typing behaviour to improve delivery rates.
+
+## Available message types
+
+<CardGroup cols={2}>
+  <Card title="Text" icon="message" href="/api-reference/send-text">
+    Send plain text messages with emoji and basic markdown formatting.
+  </Card>
+  <Card title="Media" icon="photo-film" href="/api-reference/send-media">
+    Share images, videos, audio files, and documents from a public URL.
+  </Card>
+  <Card title="Interactive Buttons" icon="hand-pointer" href="/api-reference/send-button">
+    Present up to three tappable reply buttons beneath a message body.
+  </Card>
+  <Card title="List Menu" icon="list-ul" href="/api-reference/send-list">
+    Display a structured list of selectable options in a bottom-sheet menu.
+  </Card>
+  <Card title="CTA Button" icon="arrow-pointer" href="/api-reference/send-cta">
+    Add a single call-to-action button that opens a URL or triggers a reply.
+  </Card>
+  <Card title="Carousel" icon="images" href="/api-reference/send-carousel">
+    Deliver a horizontally scrollable series of rich cards with images and buttons.
+  </Card>
+  <Card title="Location Pin" icon="location-dot" href="/api-reference/send-location">
+    Drop a GPS pin by sending latitude, longitude, and an optional place name.
+  </Card>
+  <Card title="Poll" icon="square-poll-horizontal" href="/api-reference/send-poll">
+    Create a native WhatsApp poll with a question and up to twelve answer options.
+  </Card>
+  <Card title="Group Message" icon="users" href="/api-reference/send-group">
+    Send any message type to a WhatsApp group using the group's JID.
+  </Card>
+</CardGroup>
+
+## Before you send
+
+Every send request requires three things:
+
+1. **A connected instance** — the `apiInstanceName` returned when you created and linked your WhatsApp instance. See [Instances](/guides/instances) if you have not created one yet.
+2. **A recipient number** — the full international phone number without spaces or symbols (e.g., `628123456789` for Indonesia +62).
+3. **Your API token** — passed as a `Bearer` token in the `Authorization` header.
+
+## The `delay` parameter
+
+All send endpoints accept an optional integer `delay` field (milliseconds). When set, Wachat waits that long before dispatching the message, simulating a person composing a reply. If you omit `delay`, the API automatically applies a randomized **3 000 – 5 000 ms** interval.
+
+<Tip>
+  A small, natural-looking delay significantly improves deliverability and reduces the chance of a number being flagged as a bot. Use the default random delay unless your use case requires real-time speed.
+</Tip>
+
+## Sending a text message
+
+Text messages are the simplest message type. Set `type` to `"text"` and put your content in the `message` field. The body supports emojis and WhatsApp's native markdown: `*bold*`, `_italic_`, `~strikethrough~`, and `` `monospace` ``.
+
+<CodeGroup>
+  ```bash cURL
+  curl -X POST https://app.wachat.net/api/v1/send/text \
+    -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "instanceName": "my-instance-01",
+      "number": "628123456789",
+      "type": "text",
+      "message": "Hello! 👋 Thanks for reaching out."
+    }'
+  ```
+
+  ```json Payload
+  {
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "text",
+    "message": "Hello! 👋 Thanks for reaching out.",
+    "delay": 1500
+  }
+  ```
+</CodeGroup>
+
+**Required fields**
+
+| Field | Type | Description |
+|---|---|---|
+| `instanceName` | string | Your connected instance's `apiInstanceName`. |
+| `number` | string | Recipient phone number with country code, no symbols. |
+| `type` | string | Must be `"text"`. |
+| `message` | string | The text body to send. |
+
+## Sending a media message
+
+Media messages let you attach images, videos, documents, or audio files hosted at any publicly reachable URL. Set `type` to the media category and provide `mediaUrl`. You can optionally include a `message` as a caption (captions are ignored for audio).
+
+<CodeGroup>
+  ```bash cURL
+  curl -X POST https://app.wachat.net/api/v1/send/media \
+    -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "instanceName": "my-instance-01",
+      "number": "628123456789",
+      "type": "image",
+      "mediaUrl": "https://cdn.example.com/promo-banner.png",
+      "message": "Check out this month'\''s promotions! 🎉"
+    }'
+  ```
+
+  ```json Payload
+  {
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "image",
+    "mediaUrl": "https://cdn.example.com/promo-banner.png",
+    "message": "Check out this month's promotions! 🎉",
+    "fileName": "promo-banner.png",
+    "delay": 2000
+  }
+  ```
+</CodeGroup>
+
+**Required fields**
+
+| Field | Type | Description |
+|---|---|---|
+| `instanceName` | string | Your connected instance's `apiInstanceName`. |
+| `number` | string | Recipient phone number with country code, no symbols. |
+| `type` | string | One of `"image"`, `"video"`, `"document"`, or `"audio"`. |
+| `mediaUrl` | string | Publicly accessible URL of the media file. |
+
+**Optional fields**
+
+| Field | Type | Description |
+|---|---|---|
+| `message` | string | Caption displayed beneath the media (ignored for audio). |
+| `fileName` | string | Display name shown for document attachments. |
+| `mimetype` | string | Override the detected MIME type (e.g., `"image/png"`). |
+| `delay` | integer | Custom send delay in milliseconds. |
+
+<Note>
+  Make sure your `mediaUrl` is publicly accessible without authentication. WhatsApp's servers fetch the file directly from the URL you provide, so private or signed URLs may fail.
+</Note>
+
+## Exploring other message types
+
+The interactive and advanced message types — buttons, lists, CTAs, carousels, polls, and location pins — each have their own request schema with nested `interactive` or `location` objects.
+
+<Tip>
+  Use the **API reference playground** to explore every message type interactively. You can fill in the fields and fire live requests directly from the docs without writing any code. Head to the [API Reference](/api-reference) and expand any send endpoint to try it.
+</Tip>

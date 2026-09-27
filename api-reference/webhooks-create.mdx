@@ -1,0 +1,186 @@
+---
+title: "POST /webhooks — Create or Update a Webhook Endpoint"
+sidebarTitle: "Create Webhook"
+description: "Register a new HTTPS webhook endpoint or update an existing one, subscribing it to specific Wachat events from one or all instances."
+---
+
+The `POST /webhooks` endpoint lets you register a new HTTPS endpoint to receive real-time event notifications from Wachat, or update the configuration of an existing webhook by including its `id` in the request body. When you create a webhook, Wachat returns `201 Created`; when you update one, it returns `200 OK`. In both cases, the response body contains the full `WebhookSubscription` object — including the unmasked signing secret, which you should store securely at this point.
+
+## Request Body
+
+<ParamField body="url" type="string" required>
+  The HTTPS endpoint that will receive Wachat event deliveries. Must begin with `https://`. Plain HTTP URLs are rejected with a `400` error.
+</ParamField>
+
+<ParamField body="id" type="integer">
+  The numeric ID of an existing webhook. Include this field to **update** an existing webhook rather than create a new one. Omit it to create a new webhook.
+</ParamField>
+
+<ParamField body="name" type="string">
+  A human-readable label to help you identify this webhook (e.g. `"Production webhook"`). Optional but strongly recommended.
+</ParamField>
+
+<ParamField body="events" type="array">
+  A list of event type strings this webhook should subscribe to. Omit or send `["*"]` to subscribe to all events. See the [Event Types](#event-types) section below for the full list of values.
+
+  **Example:** `["messages.upsert", "connection.update"]`
+</ParamField>
+
+<ParamField body="instanceName" type="string">
+  Scope this webhook to a single instance by providing the `apiInstanceName` (e.g. `t1_mq9r2jov_jakarta_store`). Omit this field entirely to receive events from **all** instances in your account.
+</ParamField>
+
+<ParamField body="enabled" type="boolean" default="true">
+  Set to `false` to register the webhook in a paused state. Wachat will not deliver events to a disabled webhook.
+</ParamField>
+
+<ParamField body="secret" type="string">
+  A custom signing secret used to sign webhook payloads (prefixed `whsec_`). If you omit this field, Wachat automatically generates a cryptographically random secret for you. Store the secret from the creation response — it is only returned in full once.
+</ParamField>
+
+## Event Types
+
+Use any combination of the following values in the `events` array:
+
+<Accordion title="* — All Events">
+  Subscribe to every event type Wachat can emit. Use this as a catch-all during development or when you want a single endpoint to handle everything. Equivalent to listing every individual event.
+</Accordion>
+
+<Accordion title="messages.upsert — New or Updated Message">
+  Fires when a new message is received or sent on an instance, and also when an existing message is added to the chat for the first time. This is the primary event for building chat bots, auto-responders, and inbox integrations.
+</Accordion>
+
+<Accordion title="messages.update — Message Status Change">
+  Fires when a message's delivery or read status changes — for example when a sent message moves from *sent* → *delivered* → *read*. Use this to display read receipts or track delivery rates.
+</Accordion>
+
+<Accordion title="contacts.update — Contact Record Changed">
+  Fires when a contact's profile information changes on WhatsApp, such as a name change or a new profile picture. Use this to keep your CRM contacts in sync.
+</Accordion>
+
+<Accordion title="chats.update — Chat Metadata Changed">
+  Fires when a chat's metadata is updated — for example when the unread count changes, a chat is muted, or it is archived. Useful for syncing inbox state to an external CRM or helpdesk.
+</Accordion>
+
+<Accordion title="qrcode.updated — QR Code Refreshed">
+  Fires when the QR code for a WhatsApp Baileys instance is generated or refreshed. Subscribe to this event if you display QR codes in your own UI so you can update the image in real time without polling.
+</Accordion>
+
+<Accordion title="connection.update — Instance Connection State Changed">
+  Fires when an instance connects, disconnects, or its connection state changes (e.g. `open`, `close`, `connecting`). Use this to alert your team or trigger automated reconnection logic when an instance goes offline.
+</Accordion>
+
+## Response
+
+Both `201` (create) and `200` (update) responses return the same structure:
+
+<ResponseField name="success" type="boolean">
+  `true` when the operation completed successfully.
+</ResponseField>
+
+<ResponseField name="webhook" type="object">
+  The full `WebhookSubscription` object for the created or updated webhook.
+
+  <Expandable title="WebhookSubscription fields">
+    <ResponseField name="id" type="integer">
+      The numeric ID assigned to this webhook. Store this if you need to update or delete it later.
+    </ResponseField>
+    <ResponseField name="name" type="string | null">
+      The label you provided, or `null` if none was set.
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      The registered HTTPS endpoint URL.
+    </ResponseField>
+    <ResponseField name="events" type="array">
+      The list of subscribed event types.
+    </ResponseField>
+    <ResponseField name="enabled" type="boolean">
+      Current enabled state of the webhook.
+    </ResponseField>
+    <ResponseField name="secret" type="string">
+      The full, unmasked signing secret (e.g. `whsec_abc123...`). This is the **only** time the full secret is returned — save it immediately.
+    </ResponseField>
+    <ResponseField name="instance" type="object | null">
+      The scoped instance, or `null` if the webhook applies to all instances.
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 creation timestamp.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 last-updated timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Errors
+
+| Status | Meaning |
+| ------ | ------- |
+| `400`  | Invalid request — non-HTTPS URL, unrecognised event type, or malformed payload. |
+| `401`  | Missing or invalid `Authorization` header. |
+| `403`  | Your subscription does not permit webhook creation. |
+| `404`  | The `instanceName` or webhook `id` you provided was not found. |
+
+## Examples
+
+<CodeGroup>
+
+```bash Create — cURL
+curl --request POST \
+  --url "https://app.wachat.net/api/v1/webhooks" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "name": "Production webhook",
+    "url": "https://example.com/wachat/webhook",
+    "events": ["messages.upsert", "connection.update"],
+    "instanceName": "t1_mq9r2jov_jakarta_store",
+    "enabled": true
+  }'
+```
+
+```bash Update — cURL
+curl --request POST \
+  --url "https://app.wachat.net/api/v1/webhooks" \
+  --header "Authorization: Bearer YOUR_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "id": 12,
+    "name": "Production webhook (updated)",
+    "url": "https://example.com/wachat/webhook",
+    "events": ["*"],
+    "enabled": true
+  }'
+```
+
+</CodeGroup>
+
+```json 201 Created — Response
+{
+  "success": true,
+  "webhook": {
+    "id": 12,
+    "name": "Production webhook",
+    "url": "https://example.com/wachat/webhook",
+    "events": ["messages.upsert", "connection.update"],
+    "enabled": true,
+    "secret": "whsec_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+    "instance": {
+      "instanceName": "jakarta_store",
+      "displayName": "jakarta_store",
+      "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+      "internalName": "t1_mq9r2jov_jakarta_store"
+    },
+    "createdAt": "2026-06-13T08:00:00.000Z",
+    "updatedAt": "2026-06-13T08:00:00.000Z"
+  }
+}
+```
+
+<Warning>
+  The full `secret` value is only returned in the create or update response. Wachat masks it in all subsequent list responses. Copy it to a secrets manager immediately — you cannot recover the original value later.
+</Warning>
+
+<Tip>
+  To receive events from all instances in one endpoint, simply omit the `instanceName` field. This is useful for centralised logging, monitoring, or multi-tenant inbox platforms.
+</Tip>

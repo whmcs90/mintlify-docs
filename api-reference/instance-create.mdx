@@ -1,0 +1,244 @@
+---
+title: "POST /instance/create — Create a WhatsApp Instance"
+sidebarTitle: "Create Instance"
+description: "Provision a new WhatsApp instance on your Wachat account. Baileys instances return a scannable QR code immediately in the same response."
+---
+
+Creating an instance is the first step in any Wachat integration. You send a friendly name and your preferred integration type, and Wachat responds with a prefixed `apiInstanceName` that you must use in every subsequent API call — it is not the same as the name you submitted.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/instance/create
+```
+
+## Authentication
+
+Pass your API key as a Bearer token in the `Authorization` header.
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Query Parameters
+
+<ParamField query="response" type="string" default="json">
+  Set to `image` to receive the QR code directly as an `image/png` response instead of JSON. Omit this parameter (or set it to `json`) for the default JSON payload.
+</ParamField>
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  A friendly display name for the instance (e.g. `jakarta_store`). Wachat automatically prepends a unique team prefix, so the final `apiInstanceName` will look like `t1_mq9r2jov_jakarta_store`. Always use `apiInstanceName` from the response in future calls.
+</ParamField>
+
+<ParamField body="integration" type="string" default="WHATSAPP-BAILEYS">
+  The integration type. Accepted values:
+  - `WHATSAPP-BAILEYS` — standard WhatsApp connection via QR code scan (default).
+  - `WHATSAPP-BUSINESS` — WhatsApp Business API via Meta credentials.
+</ParamField>
+
+<ParamField body="number" type="string">
+  Optional WhatsApp phone number with country code (e.g. `628123456789`).
+</ParamField>
+
+<ParamField body="rejectCalls" type="boolean">
+  When `true`, the instance automatically rejects incoming WhatsApp voice calls.
+</ParamField>
+
+<ParamField body="ignoreGroups" type="boolean">
+  When `true`, the instance ignores messages sent to group chats.
+</ParamField>
+
+<ParamField body="alwaysOnline" type="boolean">
+  When `true`, the instance maintains an online presence on WhatsApp wherever possible.
+</ParamField>
+
+<ParamField body="readMessages" type="boolean">
+  When `true`, incoming messages are automatically marked as read.
+</ParamField>
+
+<ParamField body="readStatus" type="boolean">
+  When `true`, the instance reads and processes incoming status updates.
+</ParamField>
+
+### WHATSAPP-BUSINESS Only
+
+The following fields are required when `integration` is set to `WHATSAPP-BUSINESS`.
+
+<ParamField body="metaToken" type="string">
+  Your Meta system user access token.
+</ParamField>
+
+<ParamField body="metaBusinessId" type="string">
+  Your Meta Business Account ID.
+</ParamField>
+
+<ParamField body="metaPhoneNumberId" type="string">
+  The Meta Phone Number ID associated with your WhatsApp Business number.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the instance was created successfully.
+</ResponseField>
+
+<ResponseField name="instance" type="object">
+  Details about the newly created instance.
+
+  <Expandable title="instance fields">
+    <ResponseField name="instance.id" type="integer">
+      Internal numeric ID of the instance.
+    </ResponseField>
+    <ResponseField name="instance.instanceName" type="string">
+      The friendly display name shown in the Wachat dashboard (e.g. `jakarta_store`).
+    </ResponseField>
+    <ResponseField name="instance.displayName" type="string">
+      Alias of `instanceName`.
+    </ResponseField>
+    <ResponseField name="instance.apiInstanceName" type="string">
+      **Use this value in all future API calls.** This is the unique, prefixed identifier assigned by Wachat (e.g. `t1_mq9r2jov_jakarta_store`).
+    </ResponseField>
+    <ResponseField name="instance.internalName" type="string">
+      Same value as `apiInstanceName`.
+    </ResponseField>
+    <ResponseField name="instance.number" type="string">
+      The phone number associated with this instance, if provided.
+    </ResponseField>
+    <ResponseField name="instance.integration" type="string">
+      The integration type used (`WHATSAPP-BAILEYS` or `WHATSAPP-BUSINESS`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="qrcode" type="object">
+  QR code data returned for `WHATSAPP-BAILEYS` instances. `null` for Business API instances.
+
+  <Expandable title="qrcode fields">
+    <ResponseField name="qrcode.base64" type="string">
+      A Base64 data URI (e.g. `data:image/png;base64,...`). Use this as the `src` of an `<img>` tag to display the QR code immediately.
+    </ResponseField>
+    <ResponseField name="qrcode.imageUrl" type="string">
+      A direct URL that returns the QR code as a PNG image. Append `?apiKey=YOUR_API_KEY` when using it inside an `<img>` tag.
+    </ResponseField>
+    <ResponseField name="qrcode.liveUrl" type="string">
+      A URL that returns a live, auto-refreshing HTML QR page. Append `?apiKey=YOUR_API_KEY` when embedding it in an `<iframe>`.
+    </ResponseField>
+    <ResponseField name="qrcode.pairingCode" type="string">
+      An optional phone-number pairing code when available.
+    </ResponseField>
+    <ResponseField name="qrcode.count" type="integer">
+      How many times the QR code has been generated for this instance.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="qrError" type="string | null">
+  Present when the instance was created successfully but the QR code could not be fetched. `null` in normal responses.
+</ResponseField>
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Invalid request payload or missing required field. |
+| `401` | Missing or invalid API key. |
+| `403` | Your subscription plan, instance limit, or channel restriction prevented creation. |
+| `502` | Wachat could not create the instance or return a valid instance ID. |
+
+## Examples
+
+<Steps>
+
+  <Step title="Create the instance">
+
+    Send a `POST` request with your chosen name and integration type.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST "https://app.wachat.net/api/v1/instance/create" \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "instanceName": "jakarta_store",
+        "integration": "WHATSAPP-BAILEYS"
+      }'
+    ```
+
+    ```bash cURL — Business API
+    curl -X POST "https://app.wachat.net/api/v1/instance/create" \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "instanceName": "jakarta_store",
+        "integration": "WHATSAPP-BUSINESS",
+        "metaToken": "EAABs...",
+        "metaBusinessId": "123456789",
+        "metaPhoneNumberId": "987654321"
+      }'
+    ```
+
+    ```bash cURL — QR as PNG
+    curl -X POST "https://app.wachat.net/api/v1/instance/create?response=image" \
+      -H "Authorization: Bearer YOUR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"instanceName": "jakarta_store"}' \
+      --output qr.png
+    ```
+
+    </CodeGroup>
+
+  </Step>
+
+  <Step title="Save apiInstanceName from the response">
+
+    The response contains `instance.apiInstanceName`. **Store this value** — you need it for every subsequent API call.
+
+    ```json Example response
+    {
+      "success": true,
+      "instance": {
+        "id": 26,
+        "instanceName": "jakarta_store",
+        "displayName": "jakarta_store",
+        "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+        "internalName": "t1_mq9r2jov_jakarta_store",
+        "number": "628123456789",
+        "integration": "WHATSAPP-BAILEYS"
+      },
+      "qrcode": {
+        "pairingCode": "PKRFWHWE",
+        "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+        "imageUrl": "https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store",
+        "liveUrl": "https://app.wachat.net/api/v1/instance/qr/live?instanceName=t1_mq9r2jov_jakarta_store",
+        "count": 1
+      },
+      "qrError": null
+    }
+    ```
+
+  </Step>
+
+  <Step title="Scan the QR code">
+
+    Display `qrcode.base64` as an `<img>` tag or open `qrcode.liveUrl` in a browser so the phone user can scan it.
+
+    ```html Display QR in browser
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." alt="Scan with WhatsApp" />
+    ```
+
+    Once scanned, the instance state transitions to `open`. You can verify this with [GET /instance/state](/api-reference/instance-state).
+
+  </Step>
+
+</Steps>
+
+<Note>
+  The `instanceName` you submit is just a display label. Always use `instance.apiInstanceName` from the response when calling any other Wachat endpoint.
+</Note>
+
+<Tip>
+  Set `alwaysOnline: true` during creation to keep the instance visible as online to your contacts without requiring manual activity.
+</Tip>

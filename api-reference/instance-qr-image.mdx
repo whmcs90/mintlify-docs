@@ -1,0 +1,118 @@
+---
+title: "GET /instance/qr/image — Fetch QR Code as PNG Image"
+sidebarTitle: "QR Image"
+description: "Retrieve the current WhatsApp QR code as a raw PNG image, ready to embed in an img tag or download via curl. Baileys instances only."
+---
+
+This endpoint streams the QR code for a Baileys-based WhatsApp instance directly as a binary `image/png` response. Because it returns raw image data rather than JSON, it works natively inside HTML `<img>` tags, browser windows, and `curl` commands that write to a file — no Base64 decoding required.
+
+## Endpoint
+
+```
+GET https://app.wachat.net/api/v1/instance/qr/image
+```
+
+## Authentication
+
+You can authenticate this endpoint two ways:
+
+- **Authorization header** — the standard `Bearer` token approach, preferred for server-to-server requests.
+- **`apiKey` query parameter** — required when you embed the URL directly in an HTML `<img>` tag or browser, since browsers cannot send custom headers for image src URLs.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` returned when you created the instance (e.g. `t1_mq9r2jov_jakarta_store`).
+</ParamField>
+
+<ParamField query="apiKey" type="string">
+  Your API key, used when calling the endpoint from a browser context where you cannot set the `Authorization` header (e.g. inside an `<img src="...">` tag). For server-to-server use, prefer the `Authorization: Bearer` header instead.
+</ParamField>
+
+## Response
+
+A successful `200` response contains a binary `image/png` payload — the QR code image. There is no JSON wrapper.
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Missing `instanceName` query parameter. |
+| `401` | Missing or invalid API key. |
+| `403` | Your subscription plan prevented QR code access. |
+| `404` | Instance not found for this API key. |
+| `409` | QR codes are only available for `WHATSAPP-BAILEYS` instances. `WHATSAPP-BUSINESS` instances do not use QR codes. |
+| `502` | Failed to fetch or decode the QR code image from the backend. |
+| `504` | Request to the Wachat backend timed out. |
+
+<Note>
+  This endpoint only works for instances using the `WHATSAPP-BAILEYS` integration. Calling it for a `WHATSAPP-BUSINESS` instance returns `409 Conflict`.
+</Note>
+
+## Examples
+
+<CodeGroup>
+
+```bash Download QR via curl
+curl -X GET \
+  "https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  --output qr-code.png
+```
+
+```html Embed in an img tag
+<!-- Use the apiKey query parameter since browsers cannot set Authorization headers for image sources -->
+<img
+  src="https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store&apiKey=YOUR_API_KEY"
+  alt="Scan this QR code with WhatsApp"
+  width="256"
+  height="256"
+/>
+```
+
+```javascript Node.js — save to file
+import fs from "fs";
+
+const instanceName = "t1_mq9r2jov_jakarta_store";
+const url = `https://app.wachat.net/api/v1/instance/qr/image?instanceName=${instanceName}`;
+
+const response = await fetch(url, {
+  headers: { Authorization: "Bearer YOUR_API_KEY" },
+});
+
+if (!response.ok) {
+  throw new Error(`QR fetch failed: ${response.status}`);
+}
+
+const buffer = await response.arrayBuffer();
+fs.writeFileSync("qr-code.png", Buffer.from(buffer));
+console.log("QR code saved to qr-code.png");
+```
+
+```python Python — save to file
+import requests
+
+params = {"instanceName": "t1_mq9r2jov_jakarta_store"}
+response = requests.get(
+    "https://app.wachat.net/api/v1/instance/qr/image",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+    params=params,
+)
+
+if response.status_code == 200:
+    with open("qr-code.png", "wb") as f:
+        f.write(response.content)
+    print("QR code saved.")
+else:
+    print(f"Error {response.status_code}: {response.text}")
+```
+
+</CodeGroup>
+
+<Tip>
+  If you want a live, auto-refreshing QR page instead of a static image, use the `GET /instance/qr/live` endpoint and embed the URL in an `<iframe>` with your `apiKey` appended as a query parameter.
+</Tip>
+
+<Warning>
+  QR codes expire quickly. If a user takes too long to scan, request a fresh QR by calling this endpoint again. You can also listen for the `qrcode.updated` webhook event to know exactly when a new code is generated.
+</Warning>

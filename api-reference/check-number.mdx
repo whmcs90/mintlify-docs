@@ -1,0 +1,86 @@
+---
+title: "GET /check-number — Verify a WhatsApp Phone Number"
+sidebarTitle: "Verify Number"
+description: "Check whether a phone number is registered on WhatsApp before sending a message, preventing failed deliveries and wasted API calls."
+---
+
+Before you send a message to a new number, use the `/check-number` endpoint to confirm that the number is actively registered on WhatsApp. A verification check costs far less — in time and resources — than a failed message delivery, and it lets you flag or clean bad numbers in your contact list before they cause errors in your messaging workflows.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` of the WhatsApp instance to perform the lookup through (e.g. `t1_mq9r2jov_jakarta_store`). The instance must be connected.
+</ParamField>
+
+<ParamField query="number" type="string" required>
+  The phone number to verify, written in international format **without** a leading `+` (e.g. `628123456789` for an Indonesian number). Do not include spaces, dashes, or parentheses.
+</ParamField>
+
+## Response
+
+<ResponseField name="status" type="string">
+  A short status string — `"success"` when the lookup completed without errors.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The verification result for the requested number.
+
+  <Expandable title="data fields">
+    <ResponseField name="exists" type="boolean">
+      `true` when the number is registered and active on WhatsApp. `false` means the number is either not registered or has never signed up for WhatsApp.
+    </ResponseField>
+    <ResponseField name="jid" type="string">
+      The unique WhatsApp Jabber ID (JID) assigned to the contact if they exist (e.g. `628123456789@s.whatsapp.net`). Use this JID when referencing the contact in other API calls.
+    </ResponseField>
+    <ResponseField name="number" type="string">
+      The canonical, normalised form of the verified phone number as returned by WhatsApp's servers.
+    </ResponseField>
+    <ResponseField name="instance" type="string">
+      The `apiInstanceName` of the session that performed the lookup.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url "https://app.wachat.net/api/v1/check-number?instanceName=t1_mq9r2jov_jakarta_store&number=628123456789" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+```json Response — number exists
+{
+  "status": "success",
+  "data": {
+    "exists": true,
+    "jid": "628123456789@s.whatsapp.net",
+    "number": "628123456789",
+    "instance": "t1_mq9r2jov_jakarta_store"
+  }
+}
+```
+
+```json Response — number not found
+{
+  "status": "success",
+  "data": {
+    "exists": false,
+    "jid": null,
+    "number": "628123456789",
+    "instance": "t1_mq9r2jov_jakarta_store"
+  }
+}
+```
+
+<Tip>
+  Run a check-number call before importing a new batch of contacts or triggering a bulk send campaign. Gate your send logic on `data.exists === true` to avoid delivery failures and keep your instance reputation healthy.
+</Tip>
+
+<Warning>
+  Always pass the number in international format **without** a leading `+`. For example, use `628123456789`, not `+628123456789` or `08123456789`.
+</Warning>

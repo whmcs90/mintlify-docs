@@ -1,0 +1,73 @@
+---
+title: "GET /groups — Retrieve All WhatsApp Groups"
+sidebarTitle: "List Groups"
+description: "Fetch every WhatsApp group your instance belongs to, including each group's name, JID, and metadata needed for group messaging."
+---
+
+The `/groups` endpoint returns a full list of every WhatsApp group that your instance is currently a member of. Each group object includes the group's display name, its unique JID, and associated metadata. The group JID — which follows the pattern `12036312345678@g.us` — is the value you pass as the `number` field when you want to send a message to a group via `POST /send-group`.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` of the connected WhatsApp instance whose groups you want to retrieve (e.g. `t1_mq9r2jov_jakarta_store`).
+</ParamField>
+
+## Response
+
+The endpoint returns an array of group objects. Each object in the array contains the group's identifying and descriptive metadata.
+
+<ResponseField name="name" type="string">
+  The display name of the WhatsApp group as it appears in the app.
+</ResponseField>
+
+<ResponseField name="id" type="string">
+  The group's unique WhatsApp JID in the format `<digits>@g.us` (e.g. `12036312345678@g.us`). Pass this value as the `number` parameter when sending a group message via `POST /send-group`.
+</ResponseField>
+
+<Note>
+  The group JID (ending in `@g.us`) is different from an individual contact JID (ending in `@s.whatsapp.net`). Make sure you use the correct JID format for the intended recipient type.
+</Note>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url "https://app.wachat.net/api/v1/groups?instanceName=t1_mq9r2jov_jakarta_store" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+```json Response
+[
+  {
+    "id": "12036312345678@g.us",
+    "name": "Jakarta Store Team",
+    "subject": "Jakarta Store Team",
+    "subjectOwner": "628123456789@s.whatsapp.net",
+    "subjectTime": 1718265600,
+    "creation": 1718265600,
+    "owner": "628123456789@s.whatsapp.net",
+    "desc": "Internal team group for Jakarta Store",
+    "participants": [
+      {
+        "id": "628123456789@s.whatsapp.net",
+        "isAdmin": true,
+        "isSuperAdmin": true
+      },
+      {
+        "id": "628987654321@s.whatsapp.net",
+        "isAdmin": false,
+        "isSuperAdmin": false
+      }
+    ],
+    "size": 2
+  }
+]
+```
+
+<Tip>
+  Save the group JIDs you need at application startup by calling `/groups` once and caching the results. Group JIDs do not change, so you rarely need to refresh them unless your instance joins or leaves groups.
+</Tip>

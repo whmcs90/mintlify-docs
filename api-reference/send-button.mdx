@@ -1,0 +1,157 @@
+---
+title: "POST /send/button — Send Quick Reply Button Messages"
+sidebarTitle: "Send Buttons"
+description: "Send interactive quick-reply button messages with up to three tappable options. Ideal for confirmations, surveys, and bot-driven conversation flows."
+---
+
+The `/send/button` endpoint delivers interactive messages that present the recipient with up to three tappable quick-reply buttons. When a recipient taps a button, WhatsApp sends their choice back as a message to your instance — which you can capture via a webhook to power chatbots, booking flows, surveys, and more. Each message includes a required body text, optional header title and footer text, and an array of button definitions.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/button
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Must be set to `"interactive"`. All button and interactive message types share this top-level type.
+</ParamField>
+
+<ParamField body="interactive" type="object" required>
+  The interactive message payload. Contains the UI layout and button definitions.
+
+  <Expandable title="interactive object fields">
+    <ParamField body="type" type="string" required>
+      Must be `"button"` to render the quick-reply button layout.
+    </ParamField>
+
+    <ParamField body="body" type="string" required>
+      The main message text shown above the buttons. This is where you ask a question or provide context for the choices below.
+    </ParamField>
+
+    <ParamField body="buttons" type="array" required>
+      An array of button objects. You must include between 1 and 3 buttons — WhatsApp enforces a maximum of 3 quick-reply buttons per message.
+
+      Each button object requires:
+      - `buttonId` (string) — a unique identifier returned when the user taps this button
+      - `buttonText.displayText` (string) — the visible label on the button face
+      - `type` (integer) — button type identifier (use `1` for the first button, `2` for the second, `3` for the third)
+    </ParamField>
+
+    <ParamField body="title" type="string">
+      Optional header text rendered in bold above the body text. Use this to give your message a clear subject line.
+    </ParamField>
+
+    <ParamField body="footer" type="string">
+      Optional footer text rendered in a smaller, muted style below the buttons. Commonly used for branding or disclaimers.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+<Note>
+  Button `buttonId` values are returned verbatim in the webhook payload when a recipient taps a button. Use descriptive, unique IDs like `btn_confirm` or `btn_cancel` rather than generic values like `1` or `yes` to make your webhook logic easier to maintain.
+</Note>
+
+## Example
+
+The following example sends an event attendance confirmation request with two quick-reply options.
+
+<CodeGroup>
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "interactive",
+  "interactive": {
+    "type": "button",
+    "title": "Confirm Attendance",
+    "body": "Will you be attending the event tomorrow morning?",
+    "footer": "Wachat",
+    "buttons": [
+      {
+        "buttonId": "btn_yes",
+        "buttonText": {
+          "displayText": "Yes, I'm Coming"
+        },
+        "type": 1
+      },
+      {
+        "buttonId": "btn_no",
+        "buttonText": {
+          "displayText": "Sorry, Unable to attend"
+        },
+        "type": 2
+      }
+    ]
+  },
+  "delay": 1000
+}
+```
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send/button \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "interactive",
+    "interactive": {
+      "type": "button",
+      "title": "Confirm Attendance",
+      "body": "Will you be attending the event tomorrow morning?",
+      "footer": "Wachat",
+      "buttons": [
+        {
+          "buttonId": "btn_yes",
+          "buttonText": { "displayText": "Yes, I'\''m Coming" },
+          "type": 1
+        },
+        {
+          "buttonId": "btn_no",
+          "buttonText": { "displayText": "Sorry, Unable to attend" },
+          "type": 2
+        }
+      ]
+    },
+    "delay": 1000
+  }'
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the interactive button message was accepted and queued.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Keep button labels short and action-oriented — ideally under 20 characters. Long labels may be truncated on smaller screen sizes.
+</Tip>
+
+<Warning>
+  WhatsApp enforces a strict maximum of **3 buttons** per quick-reply message. Sending more than 3 buttons in the `buttons` array will result in an error. If you need to present more than 3 choices, consider using the `/send/list` endpoint instead.
+</Warning>

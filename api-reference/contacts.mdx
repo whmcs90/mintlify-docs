@@ -1,0 +1,182 @@
+---
+title: "GET /contacts — List and Search CRM Contacts"
+sidebarTitle: "List Contacts"
+description: "Retrieve paginated CRM contacts for a WhatsApp instance. Filter by name, phone, or JID, and optionally include group chats in the results."
+---
+
+The `/contacts` endpoint returns the saved CRM contacts associated with a specific WhatsApp instance. Because contacts are scoped to a single instance, you must always supply the `instanceName` query parameter. Use the optional `q` parameter to search across contact names, phone numbers, JIDs, and push names, and use `page` and `limit` to paginate through large contact lists.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` of the instance whose contacts you want to retrieve. You can find this value in the instance list response (e.g. `t1_mq9r2jov_jakarta_store`).
+</ParamField>
+
+<ParamField query="q" type="string">
+  A free-text search string. Wachat matches against the contact's `name`, `phone`, `remoteJid`, and `pushName` fields. Omit this parameter to return all contacts.
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  The page number to return. Starts at `1`.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  The number of contacts to return per page. Minimum `1`, maximum `100`.
+</ParamField>
+
+<ParamField query="includeGroups" type="boolean" default="false">
+  When set to `true`, group chats saved as contacts are included in the response alongside individual contacts.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the request completed successfully.
+</ResponseField>
+
+<ResponseField name="count" type="integer">
+  Number of contacts returned in this page.
+</ResponseField>
+
+<ResponseField name="total" type="integer">
+  Total number of contacts matching your query across all pages.
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  The current page number.
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  The page size used for this response.
+</ResponseField>
+
+<ResponseField name="hasMore" type="boolean">
+  `true` when additional pages of results exist beyond this page.
+</ResponseField>
+
+<ResponseField name="instance" type="object">
+  Metadata about the instance the contacts belong to.
+
+  <Expandable title="instance fields">
+    <ResponseField name="id" type="integer">
+      Internal numeric ID of the instance.
+    </ResponseField>
+    <ResponseField name="instanceName" type="string">
+      Display name shown in the Wachat dashboard (e.g. `jakarta_store`).
+    </ResponseField>
+    <ResponseField name="displayName" type="string">
+      Alias for `instanceName`.
+    </ResponseField>
+    <ResponseField name="apiInstanceName" type="string">
+      Unique API identifier used in all API calls (e.g. `t1_mq9r2jov_jakarta_store`).
+    </ResponseField>
+    <ResponseField name="internalName" type="string">
+      Same value as `apiInstanceName`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="contacts" type="array">
+  Array of contact objects matching your query.
+
+  <Expandable title="contact fields">
+    <ResponseField name="id" type="integer">
+      Unique numeric ID of the CRM contact record.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      The contact's saved name in your CRM.
+    </ResponseField>
+    <ResponseField name="phone" type="string | null">
+      The contact's phone number in international format (e.g. `628123456789`). `null` if not stored.
+    </ResponseField>
+    <ResponseField name="remoteJid" type="string">
+      The contact's full WhatsApp JID (e.g. `628123456789@s.whatsapp.net`). Use this value when you need to reference the contact in other API calls.
+    </ResponseField>
+    <ResponseField name="isGroup" type="boolean">
+      `true` when this contact record represents a group chat rather than an individual.
+    </ResponseField>
+    <ResponseField name="profilePicUrl" type="string | null">
+      URL of the contact's WhatsApp profile picture. `null` if unavailable or not fetched.
+    </ResponseField>
+    <ResponseField name="chat" type="object">
+      Chat session data linked to this contact.
+
+      <Expandable title="chat fields">
+        <ResponseField name="name" type="string | null">
+          Display name of the chat.
+        </ResponseField>
+        <ResponseField name="pushName" type="string | null">
+          The name the contact has set on their own WhatsApp profile (their self-chosen display name).
+        </ResponseField>
+        <ResponseField name="lastMessageText" type="string | null">
+          Plain-text preview of the most recent message in the chat thread.
+        </ResponseField>
+        <ResponseField name="lastMessageTimestamp" type="string | null">
+          ISO 8601 timestamp of the last message (e.g. `2026-06-13T08:00:00.000Z`).
+        </ResponseField>
+        <ResponseField name="unreadCount" type="integer">
+          Number of unread messages in this chat thread.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="customData" type="object">
+      A free-form JSON object you can populate with any additional metadata you want to store against this contact.
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of when the contact record was created.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request GET \
+  --url "https://app.wachat.net/api/v1/contacts?instanceName=t1_mq9r2jov_jakarta_store&q=John&page=1&limit=50" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "success": true,
+  "count": 1,
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "hasMore": false,
+  "instance": {
+    "id": 29,
+    "instanceName": "jakarta_store",
+    "displayName": "jakarta_store",
+    "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+    "internalName": "t1_mq9r2jov_jakarta_store"
+  },
+  "contacts": [
+    {
+      "id": 101,
+      "name": "John Customer",
+      "phone": "628123456789",
+      "remoteJid": "628123456789@s.whatsapp.net",
+      "isGroup": false,
+      "profilePicUrl": "https://pps.whatsapp.net/v/t61.24694-24/example.jpg",
+      "chat": {
+        "name": "John Customer",
+        "pushName": "John",
+        "lastMessageText": "Hello",
+        "lastMessageTimestamp": "2026-06-13T08:00:00.000Z",
+        "unreadCount": 0
+      },
+      "customData": {},
+      "createdAt": "2026-06-13T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+<Note>
+  The `instanceName` query parameter must be the `apiInstanceName` value (e.g. `t1_mq9r2jov_jakarta_store`), not the human-readable display name. You can retrieve the correct value from the [List Instances](/api-reference/instance-list) endpoint.
+</Note>

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Wachat",
+  "theme": "luma",
+  "logo": {
+    "light": "https://media.brand.dev/a16f47ed-227e-4ba3-855e-c58527b0524b.png",
+    "dark": "https://media.brand.dev/a16f47ed-227e-4ba3-855e-c58527b0524b.png"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#2b79a7",
+    "light": "#ffffff"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Pricing",
+        "href": "https://www.wachat.net/pricing"
+      },
+      {
+        "label": "Support",
+        "href": "mailto:support@wachat.net"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.wachat.net"
+    }
+  },
+  "api": {
+    "baseUrl": "https://app.wachat.net/api/v1",
+    "auth": {
+      "method": "bearer"
+    },
+    "playground": {
+      "display": "interactive"
+    }
+  },
+  "openapi": "openapi.yaml",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "introduction",
+              "guides/quickstart",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/instances",
+              "guides/sending-messages",
+              "guides/webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/account-limits"
+            ]
+          },
+          {
+            "group": "Instances",
+            "pages": [
+              "api-reference/instance-create",
+              "api-reference/instance-list",
+              "api-reference/instance-state",
+              "api-reference/instance-qr-image",
+              "api-reference/instance-profile-picture",
+              "api-reference/instance-logout",
+              "api-reference/instance-delete"
+            ]
+          },
+          {
+            "group": "Messages",
+            "pages": [
+              "api-reference/send-text",
+              "api-reference/send-media",
+              "api-reference/send-button",
+              "api-reference/send-list",
+              "api-reference/send-cta",
+              "api-reference/send-carousel",
+              "api-reference/send-location",
+              "api-reference/send-poll",
+              "api-reference/send-group"
+            ]
+          },
+          {
+            "group": "Contacts & Groups",
+            "pages": [
+              "api-reference/contacts",
+              "api-reference/check-number",
+              "api-reference/groups"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks",
+              "api-reference/webhooks-create",
+              "api-reference/webhooks-delete"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

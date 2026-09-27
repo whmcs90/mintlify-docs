@@ -1,0 +1,158 @@
+---
+title: "POST /send/cta — Send Call-to-Action Button Messages"
+sidebarTitle: "Send CTA"
+description: "Send interactive messages with URL buttons that open a webpage or call buttons that dial a phone number directly from WhatsApp — no typing required."
+---
+
+The `/send/cta` endpoint delivers an interactive message card that contains one or more call-to-action buttons. Unlike quick-reply buttons — which send a text reply back to the chat — CTA buttons trigger external actions: a `urlButton` opens a webpage in the device's browser, while a `callButton` initiates a phone call directly from the WhatsApp interface. Use CTA messages to drive traffic to landing pages, let customers reach support without leaving WhatsApp, or combine both actions in a single message.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/cta
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Must be set to `"interactive"`. All interactive message types share this top-level type.
+</ParamField>
+
+<ParamField body="interactive" type="object" required>
+  The interactive CTA payload containing the message body and button definitions.
+
+  <Expandable title="interactive object fields">
+    <ParamField body="type" type="string" required>
+      Must be `"cta"` to render the call-to-action button layout.
+    </ParamField>
+
+    <ParamField body="body" type="string" required>
+      The main message copy that provides context for the actions. For example, `"Visit our landing page or contact our sales team now."`.
+    </ParamField>
+
+    <ParamField body="buttons" type="array" required>
+      An array of button objects. Each button has an `index` (integer, starting at 1) and exactly one of the following button type definitions:
+
+      **URL Button** — opens a webpage when tapped:
+      - `urlButton.displayText` (string) — the label shown on the button
+      - `urlButton.url` (string) — the full HTTPS URL to open
+
+      **Call Button** — initiates a phone call when tapped:
+      - `callButton.displayText` (string) — the label shown on the button
+      - `callButton.phoneNumber` (string) — the phone number to dial, including the `+` country code prefix
+    </ParamField>
+
+    <ParamField body="title" type="string">
+      Optional header text displayed in bold above the body copy.
+    </ParamField>
+
+    <ParamField body="footer" type="string">
+      Optional footer text in a muted style at the bottom of the card.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+The following example sends a CTA message with a URL button that opens the Wachat website and a call button that connects the recipient to a support line.
+
+<CodeGroup>
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "interactive",
+  "interactive": {
+    "type": "cta",
+    "title": "New Wachat.net Service",
+    "body": "Visit our landing page or contact our sales team now.",
+    "footer": "Powered by Wachat",
+    "buttons": [
+      {
+        "index": 1,
+        "urlButton": {
+          "displayText": "Visit",
+          "url": "https://www.wachat.net"
+        }
+      },
+      {
+        "index": 2,
+        "callButton": {
+          "displayText": "Contact us",
+          "phoneNumber": "+62812345678"
+        }
+      }
+    ]
+  }
+}
+```
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send/cta \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "interactive",
+    "interactive": {
+      "type": "cta",
+      "title": "New Wachat.net Service",
+      "body": "Visit our landing page or contact our sales team now.",
+      "footer": "Powered by Wachat",
+      "buttons": [
+        {
+          "index": 1,
+          "urlButton": {
+            "displayText": "Visit",
+            "url": "https://www.wachat.net"
+          }
+        },
+        {
+          "index": 2,
+          "callButton": {
+            "displayText": "Contact us",
+            "phoneNumber": "+62812345678"
+          }
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the CTA message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Pair a `urlButton` with a UTM-tagged link so you can track click-throughs from WhatsApp separately from other traffic sources in your analytics platform.
+</Tip>
+
+<Note>
+  CTA messages do not generate a webhook callback when tapped — the URL and phone number actions are handled natively by the WhatsApp client on the recipient's device. If you need to track engagement, use UTM parameters in your URL or a call-tracking number.
+</Note>

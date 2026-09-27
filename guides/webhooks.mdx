@@ -1,0 +1,179 @@
+---
+title: "Receive WhatsApp Events with Wachat Webhooks"
+sidebarTitle: "Webhooks"
+description: "Set up Wachat webhooks to receive real-time WhatsApp events — new messages, status updates, QR refreshes, and connection changes — in your application."
+---
+
+Webhooks let Wachat push events to your server the moment something happens on a WhatsApp instance — a new message arrives, a contact updates their profile, or a session disconnects. Instead of polling the API repeatedly, you register an HTTPS endpoint and Wachat sends an HTTP `POST` request to that URL every time a matching event fires. This makes webhooks the right tool for real-time notifications, chatbot triggers, CRM sync, and audit logging.
+
+## Endpoint requirements
+
+Your webhook URL must meet two requirements:
+
+- **HTTPS only** — Wachat rejects plain HTTP URLs with `400 Bad Request`.
+- **Fast acknowledgment** — respond with any `2xx` status code quickly. Run heavy processing asynchronously after you acknowledge the delivery, since Wachat may retry requests that time out or receive an error response.
+
+<Warning>
+  Webhook deliveries can be retried. Your handler should be **idempotent** — store the event ID and skip duplicate processing rather than applying the same action twice.
+</Warning>
+
+## Available events
+
+<Accordion title="messages.upsert — New or edited message">
+  Fired when a new message is received by the instance, or when an existing message is edited. The payload contains the full message object including sender JID, message type, body content, and timestamps.
+</Accordion>
+
+<Accordion title="messages.update — Message status change">
+  Fired when a sent message's delivery or read status changes — for example, when WhatsApp reports that a message moved from sent to delivered, or from delivered to read.
+</Accordion>
+
+<Accordion title="contacts.update — Contact profile change">
+  Fired when a contact in the instance's WhatsApp contact list updates their profile name, profile picture, or other profile metadata.
+</Accordion>
+
+<Accordion title="chats.update — Chat metadata change">
+  Fired when chat-level metadata changes, such as unread count updates, chat archiving, or mute state changes.
+</Accordion>
+
+<Accordion title="qrcode.updated — QR code refreshed">
+  Fired when the QR code for a Baileys instance is regenerated. Use this to automatically refresh the QR code displayed in your onboarding UI without polling `GET /instance/qr/image`.
+</Accordion>
+
+<Accordion title="connection.update — Session state change">
+  Fired when the instance's WhatsApp connection state changes — typically when a session opens (`open`), closes (`close`), or encounters a connection error. Subscribe to this event to detect disconnections and alert users to re-scan.
+</Accordion>
+
+<Accordion title='* — Wildcard (all events)'>
+  Pass `"*"` in the `events` array to receive every event type in a single webhook. Useful during development or when you want a single endpoint that routes events internally.
+</Accordion>
+
+## Set up a webhook
+
+<Steps>
+  <Step title="Prepare your endpoint">
+    Deploy an HTTPS URL that accepts `POST` requests and returns a `2xx` response. During local development you can use a tunnel tool such as ngrok or Cloudflare Tunnel to expose your localhost.
+  </Step>
+
+  <Step title="Create the webhook">
+    Call `POST /webhooks` with at minimum a `url` field. You can optionally filter by instance, choose specific events, and provide a custom secret.
+
+    <CodeGroup>
+      ```bash cURL
+      curl -X POST https://app.wachat.net/api/v1/webhooks \
+        -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "name": "Production webhook",
+          "url": "https://example.com/wachat/events",
+          "events": ["messages.upsert", "connection.update"],
+          "instanceName": "t1_mq9r2jov_jakarta_store",
+          "enabled": true
+        }'
+      ```
+
+      ```json Response
+      {
+        "success": true,
+        "webhook": {
+          "id": 12,
+          "name": "Production webhook",
+          "url": "https://example.com/wachat/events",
+          "events": ["messages.upsert", "connection.update"],
+          "instanceName": "t1_mq9r2jov_jakarta_store",
+          "enabled": true,
+          "secret": "whsec_••••abcdef"
+        }
+      }
+      ```
+    </CodeGroup>
+
+    <Note>
+      The `secret` field is returned in full only on creation. After that, list responses mask all but the last few characters (e.g., `whsec_••••abcdef`). Store the secret securely at creation time.
+    </Note>
+  </Step>
+
+  <Step title="Scope to an instance or all instances">
+    - **Specific instance** — include `instanceName` with the `apiInstanceName` of the instance you want to watch. Wachat sends only events from that instance to this webhook.
+    - **All instances** — omit `instanceName` entirely. Wachat delivers matching events from every instance in your account to this webhook.
+
+    <Tip>
+      Use per-instance webhooks in production to keep event streams isolated. A wildcard account-level webhook is convenient for logging and debugging.
+    </Tip>
+  </Step>
+
+  <Step title="Secure your endpoint with a secret">
+    Wachat signs each delivery with a webhook secret so you can verify the request genuinely came from Wachat. If you omit `secret` during creation, Wachat auto-generates one with the `whsec_` prefix. To use your own, pass a `secret` string in the create request — use the `whsec_` prefix to keep your secrets recognizable.
+
+    ```bash Custom secret example
+    curl -X POST https://app.wachat.net/api/v1/webhooks \
+      -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "url": "https://example.com/wachat/events",
+        "events": ["*"],
+        "secret": "whsec_your_custom_secret_here"
+      }'
+    ```
+  </Step>
+
+  <Step title="Test the webhook">
+    Send a test message through your connected instance and watch your endpoint's request logs. A successful delivery looks like an HTTP `POST` with a JSON body containing the event type and payload. Confirm your handler returns `200 OK`.
+  </Step>
+</Steps>
+
+## Webhook create reference
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `url` | ✅ | string | HTTPS endpoint URL that will receive event deliveries. |
+| `name` | — | string | Friendly label shown in the Wachat dashboard. |
+| `events` | — | string[] | Array of event names to subscribe to. Defaults to all events if omitted. |
+| `instanceName` | — | string | Scope deliveries to one instance. Omit to receive events from all instances. |
+| `enabled` | — | boolean | Set to `false` to pause deliveries without deleting the webhook. Defaults to `true`. |
+| `secret` | — | string | Signing secret. Wachat auto-generates one with a `whsec_` prefix if you omit this. |
+
+## List webhooks
+
+Retrieve all webhooks on your account, optionally filtered to a specific instance:
+
+```bash cURL
+# All webhooks
+curl "https://app.wachat.net/api/v1/webhooks" \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+
+# Webhooks for a specific instance
+curl "https://app.wachat.net/api/v1/webhooks?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+```
+
+The response includes a `count` and a `webhooks` array. Each object contains the webhook `id`, `url`, `events`, `enabled` status, and the masked `secret`.
+
+## Update a webhook
+
+To update an existing webhook, include the webhook `id` in your `POST /webhooks` request body alongside any fields you want to change. Wachat performs an upsert — if the `id` matches an existing webhook it updates it; if you omit `id` it creates a new one.
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/webhooks \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 12,
+    "events": ["messages.upsert", "messages.update", "connection.update"],
+    "enabled": true
+  }'
+```
+
+## Delete a webhook
+
+Delete a webhook by passing its numeric `id` as a query parameter:
+
+```bash cURL
+curl -X DELETE "https://app.wachat.net/api/v1/webhooks?id=12" \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN"
+```
+
+A successful response returns `{ "success": true, "deleted": true, "id": 12 }`. Deleted webhooks stop receiving deliveries immediately and cannot be recovered.
+
+<Note>
+  Deleting an instance does **not** automatically delete webhooks scoped to that instance. Clean up associated webhooks manually to avoid orphaned subscriptions.
+</Note>

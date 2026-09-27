@@ -1,0 +1,126 @@
+---
+title: "POST /send/media — Send Images, Videos, and Files"
+sidebarTitle: "Send Media"
+description: "Send images, videos, documents, and audio files to a WhatsApp contact via a direct media URL. Supports optional captions for all types except audio."
+---
+
+The `/send/media` endpoint lets you attach rich media to your WhatsApp messages — whether that's a promotional image, an instructional video, a PDF invoice, or an audio clip. You provide a publicly accessible URL pointing directly to your media file, and Wachat fetches and delivers it to the recipient. For all media types except audio, you can include a `message` field that appears as a caption beneath the attachment.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/media
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  The media category. Must be one of: `"image"`, `"video"`, `"document"`, or `"audio"`.
+</ParamField>
+
+<ParamField body="mediaUrl" type="string" required>
+  A fully qualified, publicly accessible URL pointing directly to your media file. The URL must be reachable by Wachat's servers at the time of sending.
+</ParamField>
+
+<ParamField body="message" type="string">
+  A caption displayed beneath the media attachment. Supported for `image`, `video`, and `document` types. **This field is ignored when `type` is `"audio"`.**
+</ParamField>
+
+<ParamField body="fileName" type="string">
+  The filename shown to the recipient when they receive or download the file. Strongly recommended for `document` messages so recipients see a meaningful name rather than a raw URL slug.
+</ParamField>
+
+<ParamField body="mimetype" type="string">
+  Explicitly sets the MIME type of the media (e.g., `"image/png"`, `"application/pdf"`). Use this if the file's Content-Type header at the source URL is incorrect or missing.
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds before the message is sent. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+<Note>
+  The `message` caption field is silently ignored for `audio` messages. WhatsApp does not display captions on voice or audio file messages.
+</Note>
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL — Image with Caption
+curl -X POST https://app.wachat.net/api/v1/send/media \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "image",
+    "mediaUrl": "https://cdn.pixabay.com/photo/2022/09/23/09/13/promotion-7474039_1280.png",
+    "message": "Check out this month'\''s exciting promotions!",
+    "fileName": "promotion-july.png",
+    "mimetype": "image/png"
+  }'
+```
+
+```json Send a Document
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "document",
+  "mediaUrl": "https://example.com/files/invoice-00123.pdf",
+  "message": "Please find your invoice attached.",
+  "fileName": "invoice-00123.pdf",
+  "mimetype": "application/pdf"
+}
+```
+
+```json Send a Video
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "video",
+  "mediaUrl": "https://example.com/videos/product-demo.mp4",
+  "message": "Watch our quick product walkthrough 🎬",
+  "delay": 2000
+}
+```
+
+```json Send Audio
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "audio",
+  "mediaUrl": "https://example.com/audio/welcome-message.ogg"
+}
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms that your media message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Always specify `fileName` for `document` messages. Without it, recipients may see a raw filename derived from the URL, such as `invoice-00123.pdf?token=abc123`, which looks unprofessional and can break file downloads on some devices.
+</Tip>
+
+<Warning>
+  Make sure your `mediaUrl` is publicly accessible and returns the correct `Content-Type` header. Wachat cannot deliver media hosted behind authentication walls, VPNs, or local network addresses.
+</Warning>

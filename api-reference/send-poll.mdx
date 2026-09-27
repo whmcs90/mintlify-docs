@@ -1,0 +1,111 @@
+---
+title: "POST /send-poll — Send an Interactive WhatsApp Poll"
+sidebarTitle: "Send Poll"
+description: "Send a native WhatsApp poll with a question and up to 12 answer options. Control how many choices each voter can select to gather structured feedback."
+---
+
+The `/send-poll` endpoint creates a native WhatsApp poll inside the conversation. Unlike custom interactive messages, polls are rendered by WhatsApp itself — recipients see a familiar voting interface with checkboxes or radio buttons (depending on `selectableCount`), and their votes are tallied in real time and visible to all participants in the conversation. Use polls to collect preferences, schedule meetings, run quick surveys, or let customers vote on upcoming product features.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send-poll
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="pollName" type="string" required>
+  The poll question or statement text displayed at the top of the poll card. For example, `"Which day works best for you?"`.
+</ParamField>
+
+<ParamField body="options" type="array" required>
+  An array of answer option strings that recipients can choose from. Each element is a plain string. For example, `["Monday", "Tuesday", "Wednesday"]`. WhatsApp supports up to 12 options per poll.
+</ParamField>
+
+<ParamField body="selectableCount" type="integer" required>
+  The maximum number of options a single voter can select. Set to `1` to create a single-choice poll (radio button behavior). Set to a value greater than `1` to allow multiple selections. Set to `0` to allow voters to select any number of options.
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+
+```json Single-Choice Poll
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "pollName": "Which day works best for your consultation?",
+  "options": [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday"
+  ],
+  "selectableCount": 1
+}
+```
+
+```json Multi-Choice Poll
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "pollName": "Which services are you interested in?",
+  "options": [
+    "SaaS Development",
+    "VPS & Cloud Setup",
+    "UI/UX Design",
+    "SEO & Marketing"
+  ],
+  "selectableCount": 2
+}
+```
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send-poll \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "pollName": "Which day works best for your consultation?",
+    "options": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "selectableCount": 1
+  }'
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the poll was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Set `selectableCount` to `1` when you need a clear single winner — for example, picking a meeting date. Use a higher value when you want to let respondents express multiple interests or preferences, such as selecting all the services they need.
+</Tip>
+
+<Note>
+  Poll vote results are end-to-end encrypted by WhatsApp. To receive vote updates programmatically, configure a webhook and listen for `messages.update` events — Wachat will forward vote tallies as they come in.
+</Note>

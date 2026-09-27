@@ -1,0 +1,106 @@
+---
+title: "POST /send-location — Share a Location Pin on WhatsApp"
+sidebarTitle: "Send Location"
+description: "Send a map location pin with latitude and longitude to a WhatsApp contact. Optionally include a place name and full street address for added context."
+---
+
+The `/send-location` endpoint drops a map pin directly into a WhatsApp conversation. The recipient sees an interactive map preview they can tap to open in their preferred maps app for navigation. This is perfect for sharing a store address, a pickup point, an event venue, or a delivery destination. You can enrich the pin with a human-readable place name and full street address so the recipient understands the location at a glance without having to open the map.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send-location
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="latitude" type="number" required>
+  The latitude coordinate of the location as a decimal number. For example, `-8.6570` for Kupang, Indonesia.
+</ParamField>
+
+<ParamField body="longitude" type="number" required>
+  The longitude coordinate of the location as a decimal number. For example, `115.2166` for Bali, Indonesia.
+</ParamField>
+
+<ParamField body="name" type="string">
+  A short, human-readable name for the location — for example, `"Wachat Head Office"` or `"Main Store Branch"`. Displayed as the pin title in the map preview.
+</ParamField>
+
+<ParamField body="address" type="string">
+  The full street address of the location, displayed below the name in the map preview card. For example, `"Jl. Sudirman No. 1, Jakarta Pusat, DKI Jakarta 10220"`.
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send-location \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "latitude": -6.2088,
+    "longitude": 106.8456,
+    "name": "Wachat Head Office",
+    "address": "Jl. Sudirman No. 1, Jakarta Pusat, DKI Jakarta 10220"
+  }'
+```
+
+```json Request Body — Full
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "latitude": -6.2088,
+  "longitude": 106.8456,
+  "name": "Wachat Head Office",
+  "address": "Jl. Sudirman No. 1, Jakarta Pusat, DKI Jakarta 10220",
+  "delay": 1000
+}
+```
+
+```json Request Body — Minimal
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "latitude": -8.6570,
+  "longitude": 115.2166
+}
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the location message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Always include `name` and `address` when sharing a business location. The map preview alone requires the recipient to tap through to understand where they're going — a clear name and address lets them see all the context at a glance inside the chat.
+</Tip>
+
+<Note>
+  You can find accurate latitude and longitude coordinates for any address using Google Maps. Right-click (or long-press on mobile) on a map location and select **What's here?** to copy the precise decimal coordinates.
+</Note>

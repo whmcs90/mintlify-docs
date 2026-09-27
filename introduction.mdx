@@ -1,0 +1,83 @@
+---
+title: "Wachat API: Send WhatsApp Messages Programmatically"
+sidebarTitle: "Overview"
+description: "Wachat is a REST API that lets you send WhatsApp messages, manage instances, configure webhooks, and handle contacts — all over HTTPS with JSON."
+---
+
+Wachat gives you a straightforward REST API to build WhatsApp messaging directly into your applications. Every request goes to a single base URL, authenticates with a Bearer token, and returns a JSON response — so you can integrate Wachat with any language or framework that can make an HTTP request.
+
+## Base URL
+
+All API requests target the following base URL:
+
+```bash
+https://app.wachat.net/api/v1
+```
+
+## Authentication
+
+You authenticate every request by passing your API token in the `Authorization` header:
+
+```bash
+curl https://app.wachat.net/api/v1/account/limits \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Accept: application/json"
+```
+
+<Note>
+  Find your API token in the Wachat dashboard under **Settings → API Keys**. Keep it server-side and never expose it in client code or public repositories.
+</Note>
+
+## What You Can Build
+
+Wachat covers the four pillars of WhatsApp automation:
+
+<CardGroup cols={2}>
+  <Card title="Messaging" icon="message">
+    Send text, images, documents, audio, carousels, quick-reply buttons, CTAs, polls, and location pins to any WhatsApp number.
+  </Card>
+  <Card title="Instances" icon="mobile">
+    Create, connect, list, and delete WhatsApp session instances. Retrieve QR codes and monitor connection state in real time.
+  </Card>
+  <Card title="Webhooks" icon="webhook">
+    Subscribe to events like `messages.upsert`, `connection.update`, and more. Create, update, or delete webhook endpoints from the API.
+  </Card>
+  <Card title="Contacts" icon="address-book">
+    List and search CRM contacts stored against a specific instance, with support for pagination and group-chat filtering.
+  </Card>
+</CardGroup>
+
+## Response Format
+
+Every endpoint returns `application/json`. Successful responses include a `success: true` field alongside the resource payload. Error responses carry a standard HTTP status code and a descriptive message body.
+
+```json
+{
+  "success": true,
+  "account": {
+    "teamId": 25,
+    "teamName": "Jakarta Team"
+  }
+}
+```
+
+## Common HTTP Status Codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Request succeeded |
+| `201` | Resource created |
+| `400` | Invalid request payload or missing parameter |
+| `401` | Missing or invalid API key |
+| `403` | Subscription does not allow this action |
+| `404` | Resource not found |
+| `409` | Conflict (e.g., instance still connected) |
+| `500` | Internal server error |
+
+## Interactive Playground
+
+Every endpoint in the API Reference includes a built-in playground where you can fill in parameters, paste your token, and fire live requests without writing any code. Use it to explore responses and prototype integrations before you commit to an implementation.
+
+<Tip>
+  Head to the **API Reference** section in the sidebar to open the interactive playground for any endpoint.
+</Tip>

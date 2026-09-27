@@ -1,0 +1,254 @@
+---
+title: "GET /account/limits — Retrieve Plan and Usage Data"
+sidebarTitle: "Account Limits"
+description: "Retrieve your Wachat account's plan details, subscription status, current resource usage, and feature entitlements in a single request."
+---
+
+The `GET /account/limits` endpoint gives you a real-time snapshot of your Wachat account: which plan you're on, whether your subscription is active, how many users, contacts, instances, and messages you have used against your plan limits, and which optional features (AI, Flow Builder, Campaigns, Templates, Voice Calls) are enabled. Use this endpoint to build usage dashboards, enforce client-side guards before creating new resources, or detect when a limit is about to be reached.
+
+## Request
+
+```bash
+curl --request GET \
+  --url https://app.wachat.net/api/v1/account/limits \
+  --header "Authorization: Bearer YOUR_SECRET_TOKEN" \
+  --header "Content-Type: application/json"
+```
+
+<ParamField query="(no parameters)" type="">
+  This endpoint takes no query parameters. Authentication via `Authorization: Bearer` is the only requirement.
+</ParamField>
+
+## Response
+
+### Response Fields
+
+<ResponseField name="success" type="boolean" required>
+  `true` when the request completed successfully.
+</ResponseField>
+
+<ResponseField name="account" type="object" required>
+  Basic identifying information for the authenticated team.
+
+  <Expandable title="account properties">
+    <ResponseField name="account.teamId" type="integer" required>
+      Unique numeric identifier for your Wachat team.
+    </ResponseField>
+
+    <ResponseField name="account.teamName" type="string" required>
+      Human-readable name of your Wachat team.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="plan" type="object" required>
+  Details about the plan your account is currently subscribed to. All fields are nullable when no plan is attached (e.g., on a free tier or before first subscription).
+
+  <Expandable title="plan properties">
+    <ResponseField name="plan.id" type="integer | null" required>
+      Internal plan identifier.
+    </ResponseField>
+
+    <ResponseField name="plan.name" type="string | null" required>
+      Display name of the plan, for example `"Pro"`.
+    </ResponseField>
+
+    <ResponseField name="plan.interval" type="string | null" required>
+      Billing interval: `"month"` or `"year"`.
+    </ResponseField>
+
+    <ResponseField name="plan.currency" type="string | null" required>
+      ISO 4217 currency code for the plan price, for example `"usd"`.
+    </ResponseField>
+
+    <ResponseField name="plan.amount" type="integer | null" required>
+      Plan price in the smallest currency unit (cents). A value of `2900` means $29.00 USD.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="subscription" type="object" required>
+  Current subscription lifecycle state for the account.
+
+  <Expandable title="subscription properties">
+    <ResponseField name="subscription.status" type="string" required>
+      Subscription status string, for example `"active"`, `"trialing"`, or `"past_due"`.
+    </ResponseField>
+
+    <ResponseField name="subscription.hasAccess" type="boolean" required>
+      `true` when the account currently has access to paid features.
+    </ResponseField>
+
+    <ResponseField name="subscription.isExpired" type="boolean" required>
+      `true` when the subscription period has ended without renewal.
+    </ResponseField>
+
+    <ResponseField name="subscription.isTrial" type="boolean" required>
+      `true` when the account is on a trial period.
+    </ResponseField>
+
+    <ResponseField name="subscription.isCancelled" type="boolean" required>
+      `true` when the subscription has been cancelled and will not renew.
+    </ResponseField>
+
+    <ResponseField name="subscription.isPending" type="boolean" required>
+      `true` when a payment or activation is pending.
+    </ResponseField>
+
+    <ResponseField name="subscription.isPastDue" type="boolean" required>
+      `true` when a payment is overdue.
+    </ResponseField>
+
+    <ResponseField name="subscription.effectiveExpiry" type="string (ISO 8601) | null" required>
+      The effective date and time when access ends, accounting for any grace periods.
+    </ResponseField>
+
+    <ResponseField name="subscription.currentPeriodEnd" type="string (ISO 8601) | null" required>
+      The end of the current billing cycle.
+    </ResponseField>
+
+    <ResponseField name="subscription.trialEndsAt" type="string (ISO 8601) | null" required>
+      When the trial period ends. `null` when not on a trial.
+    </ResponseField>
+
+    <ResponseField name="subscription.expiresAt" type="string (ISO 8601) | null" required>
+      When the subscription expires. `null` for auto-renewing subscriptions.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="limits" type="object" required>
+  Usage and limit data for each metered resource. Each resource uses the `UsageLimit` structure described below.
+
+  <Expandable title="limits properties">
+    <ResponseField name="limits.users" type="UsageLimit" required>
+      Usage for team member seats.
+    </ResponseField>
+
+    <ResponseField name="limits.contacts" type="UsageLimit" required>
+      Usage for stored CRM contacts.
+    </ResponseField>
+
+    <ResponseField name="limits.instances" type="UsageLimit" required>
+      Usage for WhatsApp instances (connected sessions).
+    </ResponseField>
+
+    <ResponseField name="limits.messages" type="UsageLimit | null" required>
+      Usage for messages sent. `null` when the plan has unlimited messages.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="features" type="object" required>
+  Boolean flags indicating which optional features are enabled for your plan.
+
+  <Expandable title="features properties">
+    <ResponseField name="features.ai" type="boolean" required>
+      `true` when AI-powered reply and automation features are available.
+    </ResponseField>
+
+    <ResponseField name="features.flowBuilder" type="boolean" required>
+      `true` when the visual Flow Builder is available for building automated conversation flows.
+    </ResponseField>
+
+    <ResponseField name="features.campaigns" type="boolean" required>
+      `true` when the Campaigns module for bulk messaging is available.
+    </ResponseField>
+
+    <ResponseField name="features.templates" type="boolean" required>
+      `true` when saved message templates are available.
+    </ResponseField>
+
+    <ResponseField name="features.voiceCalls" type="boolean" required>
+      `true` when WhatsApp voice call handling is enabled.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### UsageLimit Object
+
+Each resource under `limits` returns a `UsageLimit` object with the following fields.
+
+<ResponseField name="limit" type="integer | string" required>
+  The maximum number of this resource allowed under your plan. May be a string such as `"unlimited"` when the plan imposes no cap.
+</ResponseField>
+
+<ResponseField name="used" type="integer" required>
+  The number of this resource currently in use.
+</ResponseField>
+
+<ResponseField name="remaining" type="integer | string" required>
+  How many more of this resource you can create. May be a string such as `"unlimited"` when no cap applies.
+</ResponseField>
+
+<ResponseField name="isLimitReached" type="boolean" required>
+  `true` when `used` has reached or exceeded `limit`. Use this flag to prevent users from attempting to create resources that would fail with `403`.
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "success": true,
+  "account": {
+    "teamId": 25,
+    "teamName": "Jakarta Team"
+  },
+  "plan": {
+    "id": 2,
+    "name": "Pro",
+    "interval": "month",
+    "currency": "usd",
+    "amount": 2900
+  },
+  "subscription": {
+    "status": "active",
+    "hasAccess": true,
+    "isExpired": false,
+    "isTrial": false,
+    "isCancelled": false,
+    "isPending": false,
+    "isPastDue": false,
+    "effectiveExpiry": "2026-07-13T08:00:00.000Z",
+    "currentPeriodEnd": "2026-07-13T08:00:00.000Z",
+    "trialEndsAt": null,
+    "expiresAt": null
+  },
+  "limits": {
+    "users": {
+      "limit": 10,
+      "used": 3,
+      "remaining": 7,
+      "isLimitReached": false
+    },
+    "contacts": {
+      "limit": 5000,
+      "used": 1284,
+      "remaining": 3716,
+      "isLimitReached": false
+    },
+    "instances": {
+      "limit": 3,
+      "used": 1,
+      "remaining": 2,
+      "isLimitReached": false
+    },
+    "messages": null
+  },
+  "features": {
+    "ai": true,
+    "flowBuilder": true,
+    "campaigns": true,
+    "templates": true,
+    "voiceCalls": false
+  }
+}
+```
+
+## Error Responses
+
+| Status | Description |
+|--------|-------------|
+| `401`  | The `Authorization` header is missing or the API key is invalid. |
+| `403`  | Your subscription plan does not allow access to account limit data. |
+| `500`  | An unexpected server error occurred. |

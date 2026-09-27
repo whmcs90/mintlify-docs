@@ -1,0 +1,54 @@
+---
+title: "Wachat: WhatsApp Messaging API for Developers"
+sidebarTitle: "Home"
+description: "Wachat gives you a production-ready REST API to send WhatsApp messages, manage instances, and receive real-time events in your application."
+---
+
+Wachat is a WhatsApp messaging infrastructure platform that lets you integrate WhatsApp into your applications through a single, reliable REST API. Connect WhatsApp instances, send rich interactive messages, verify phone numbers, and subscribe to real-time delivery and conversation events — all without managing phone hardware or WhatsApp clients directly.
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="play" href="/guides/quickstart">
+    Make your first authenticated API request in minutes.
+  </Card>
+  <Card title="Authentication" icon="lock" href="/guides/authentication">
+    Learn how to get and use your API token securely.
+  </Card>
+  <Card title="Webhooks" icon="bolt" href="/guides/webhooks">
+    Receive incoming messages and events in real time.
+  </Card>
+</CardGroup>
+
+## What you can build
+
+<CardGroup cols={2}>
+  <Card title="Send rich messages" icon="message" href="/guides/sending-messages">
+    Text, images, videos, documents, buttons, lists, carousels, polls, and location pins.
+  </Card>
+  <Card title="Manage WhatsApp instances" icon="qrcode" href="/guides/instances">
+    Create instances, scan QR codes, check connection state, and clean up sessions.
+  </Card>
+  <Card title="Contacts & groups" icon="users" href="/api-reference/contacts">
+    Search your CRM contacts, verify numbers, and broadcast to WhatsApp groups.
+  </Card>
+  <Card title="Full API reference" icon="code" href="/api-reference/introduction">
+    Explore every endpoint with an interactive playground and live request examples.
+  </Card>
+</CardGroup>
+
+## Get started in three steps
+
+<Steps>
+  <Step title="Get your API token">
+    Sign in to your [Wachat dashboard](https://app.wachat.net) and copy your API token from **Settings → API Keys**.
+  </Step>
+  <Step title="Create a WhatsApp instance">
+    Call `POST /instance/create` to provision a new WhatsApp connection, then scan the QR code to link your phone number.
+  </Step>
+  <Step title="Send your first message">
+    Call `POST /send/text` with your `instanceName` and a recipient number to send a WhatsApp message from your application.
+  </Step>
+</Steps>
+
+<Warning>Keep your API token server-side. It grants full access to your WhatsApp instances and messaging quota — never expose it in client-side code or public repositories.</Warning>
+
+<Tip>Every endpoint in the API Reference includes a live **Try It** playground so you can test requests and inspect real responses directly from the docs.</Tip>

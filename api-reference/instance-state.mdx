@@ -1,0 +1,180 @@
+---
+title: "GET /instance/state — Check WhatsApp Connection Status"
+sidebarTitle: "Instance State"
+description: "Poll the live connection status of a WhatsApp instance and retrieve its linked phone number, profile name, and profile picture URL."
+---
+
+Before sending a message, you should confirm that an instance is connected. The state endpoint returns a normalised snapshot of the instance — including connection state, the WhatsApp phone number, and profile information — so you can gate your messaging logic on a live `"open"` state rather than guessing from stale data.
+
+## Endpoint
+
+```
+GET https://app.wachat.net/api/v1/instance/state
+```
+
+## Authentication
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` returned when you created the instance (e.g. `t1_mq9r2jov_jakarta_store`). Do not pass the friendly display name here.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the request completed successfully.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The raw state payload returned by the Wachat API backend.
+
+  <Expandable title="data fields">
+    <ResponseField name="data.instance.instanceName" type="string">
+      The internal API instance name.
+    </ResponseField>
+    <ResponseField name="data.instance.state" type="string">
+      Raw connection state string from the backend (e.g. `"open"`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="instance" type="object">
+  Normalized instance state and profile data — use this object in your application logic.
+
+  <Expandable title="instance fields">
+    <ResponseField name="instance.instanceName" type="string">
+      Friendly display name shown in the Wachat dashboard (safe to display in your UI).
+    </ResponseField>
+    <ResponseField name="instance.apiInstanceName" type="string">
+      The unique, prefixed API identifier. Use this value when calling other endpoints.
+    </ResponseField>
+    <ResponseField name="instance.state" type="string">
+      Connection state. A value of `"open"` means the instance is connected and ready. Any other value (e.g. `"close"`, `"connecting"`) means the instance needs attention.
+    </ResponseField>
+    <ResponseField name="instance.number" type="string | null">
+      The WhatsApp phone number linked to this instance, or `null` if the instance has not completed a QR scan.
+    </ResponseField>
+    <ResponseField name="instance.profileName" type="string | null">
+      The WhatsApp display name of the connected account. Wachat normalizes internal API names back to the friendly display name automatically.
+    </ResponseField>
+    <ResponseField name="instance.profilePictureUrl" type="string | null">
+      URL of the WhatsApp profile picture when returned by WhatsApp.
+    </ResponseField>
+    <ResponseField name="instance.integration" type="string | null">
+      Integration type: `WHATSAPP-BAILEYS` or `WHATSAPP-BUSINESS`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Missing `instanceName` query parameter. |
+| `401` | Missing or invalid API key. |
+| `403` | Your subscription plan prevented the state lookup. |
+| `404` | No instance found for this API key with the given name. |
+| `500` | Internal server error. |
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://app.wachat.net/api/v1/instance/state?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript Node.js
+const instanceName = "t1_mq9r2jov_jakarta_store";
+
+const response = await fetch(
+  `https://app.wachat.net/api/v1/instance/state?instanceName=${instanceName}`,
+  {
+    headers: { Authorization: "Bearer YOUR_API_KEY" },
+  }
+);
+const { instance } = await response.json();
+
+if (instance.state === "open") {
+  console.log("Instance is connected:", instance.number);
+} else {
+  console.log("Instance is not connected. State:", instance.state);
+}
+```
+
+```python Python
+import requests
+
+params = {"instanceName": "t1_mq9r2jov_jakarta_store"}
+response = requests.get(
+    "https://app.wachat.net/api/v1/instance/state",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+    params=params,
+)
+data = response.json()
+print(data["instance"]["state"])
+```
+
+</CodeGroup>
+
+### Example Response — Connected Instance
+
+```json
+{
+  "success": true,
+  "data": {
+    "instance": {
+      "instanceName": "t1_mq9r2jov_jakarta_store",
+      "state": "open"
+    }
+  },
+  "instance": {
+    "instanceName": "jakarta_store",
+    "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+    "internalName": "t1_mq9r2jov_jakarta_store",
+    "state": "open",
+    "number": "628123456789",
+    "profileName": "Jakarta Store",
+    "profilePictureUrl": "https://pps.whatsapp.net/v/t61.24694-24/example.jpg",
+    "integration": "WHATSAPP-BAILEYS"
+  }
+}
+```
+
+### Example Response — Disconnected Instance
+
+```json
+{
+  "success": true,
+  "data": {
+    "instance": {
+      "instanceName": "t1_mq9r2jov_jakarta_store",
+      "state": "close"
+    }
+  },
+  "instance": {
+    "instanceName": "jakarta_store",
+    "apiInstanceName": "t1_mq9r2jov_jakarta_store",
+    "internalName": "t1_mq9r2jov_jakarta_store",
+    "state": "close",
+    "number": null,
+    "profileName": null,
+    "profilePictureUrl": null,
+    "integration": "WHATSAPP-BAILEYS"
+  }
+}
+```
+
+<Note>
+  An `instance.state` of `"open"` is the only value that indicates a fully connected, message-ready session. All other states — including `"connecting"` and `"close"` — mean the instance cannot send messages yet.
+</Note>
+
+<Tip>
+  Use the `instance` object (not `data`) in your application. Wachat normalises the profile name and other fields for you so you never see raw internal API identifiers in the display fields.
+</Tip>

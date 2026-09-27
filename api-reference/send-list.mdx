@@ -1,0 +1,163 @@
+---
+title: "POST /send/list — Send a WhatsApp List Selection Menu"
+sidebarTitle: "Send List"
+description: "Send a tappable list menu with grouped rows that recipients can browse and select from. Perfect for service catalogs, schedules, and multi-option menus."
+---
+
+The `/send/list` endpoint presents the recipient with a collapsible selection menu that opens into a full-screen list of categorized rows when tapped. Unlike button messages — which are limited to three choices — list messages support many rows organized into one or more named sections, making them ideal for menus, session schedules, product catalogs, and support routing flows. The recipient taps the trigger button, browses the list, selects a row, and their choice is returned to your webhook.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/list
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Must be set to `"interactive"`. All interactive message types share this top-level type.
+</ParamField>
+
+<ParamField body="interactive" type="object" required>
+  The interactive list payload containing the header, body, button label, and section data.
+
+  <Expandable title="interactive object fields">
+    <ParamField body="type" type="string" required>
+      Must be `"list"` to render the list selection layout.
+    </ParamField>
+
+    <ParamField body="title" type="string" required>
+      The header text displayed at the top of the message card. Keep it concise — this is the first thing recipients read.
+    </ParamField>
+
+    <ParamField body="text" type="string" required>
+      The body copy displayed below the title, providing context or instructions before the recipient opens the list.
+    </ParamField>
+
+    <ParamField body="buttonText" type="string" required>
+      The label on the button that recipients tap to open the list. For example, `"View All Sessions"` or `"Choose a Service"`.
+    </ParamField>
+
+    <ParamField body="sections" type="array" required>
+      An array of section objects that organize rows into named groups. Each section has:
+      - `title` (string) — the section heading displayed inside the list drawer
+      - `rows` (array) — an array of row objects, each with:
+        - `title` (string) — the row label
+        - `description` (string) — subtitle or detail text shown beneath the title
+        - `rowId` (string) — a unique identifier returned in the webhook when this row is selected
+    </ParamField>
+
+    <ParamField body="footerText" type="string">
+      Optional footer text rendered in a muted style at the bottom of the message card.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+The following example sends a Digital Service Center consultation booking menu with a morning and afternoon session to choose from.
+
+<CodeGroup>
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "interactive",
+  "interactive": {
+    "type": "list",
+    "title": "Digital Service Center",
+    "text": "Please select one of the available consultation sessions below:",
+    "footerText": "Flobamora Solusi Digital",
+    "buttonText": "View All Sessions",
+    "sections": [
+      {
+        "title": "Schedule Options",
+        "rows": [
+          {
+            "title": "Morning Session",
+            "description": "09:00 - 12:00 PM",
+            "rowId": "sesi_1"
+          },
+          {
+            "title": "Afternoon Session",
+            "description": "13:00 - 16:00 PM",
+            "rowId": "sesi_2"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send/list \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "interactive",
+    "interactive": {
+      "type": "list",
+      "title": "Digital Service Center",
+      "text": "Please select one of the available consultation sessions below:",
+      "footerText": "Flobamora Solusi Digital",
+      "buttonText": "View All Sessions",
+      "sections": [
+        {
+          "title": "Schedule Options",
+          "rows": [
+            {
+              "title": "Morning Session",
+              "description": "09:00 - 12:00 PM",
+              "rowId": "sesi_1"
+            },
+            {
+              "title": "Afternoon Session",
+              "description": "13:00 - 16:00 PM",
+              "rowId": "sesi_2"
+            }
+          ]
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the list message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Group rows into meaningful sections when your list has many items. For example, a support menu might have a "Billing" section and a "Technical" section, each with their own rows. This makes scanning the list much faster for recipients.
+</Tip>
+
+<Note>
+  Each `rowId` is returned in the webhook payload when a recipient makes a selection. Use clear, structured IDs like `session_morning` or `plan_pro` to make downstream processing straightforward.
+</Note>

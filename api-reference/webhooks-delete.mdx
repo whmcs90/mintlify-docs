@@ -1,0 +1,64 @@
+---
+title: "DELETE /webhooks — Remove a Webhook by ID"
+sidebarTitle: "Delete Webhook"
+description: "Permanently remove a webhook endpoint from your Wachat account by its numeric ID, stopping all future event deliveries to that URL."
+---
+
+The `DELETE /webhooks` endpoint permanently removes a webhook endpoint from your Wachat account. Once deleted, Wachat immediately stops delivering events to the associated URL. If you want to temporarily pause deliveries rather than delete the webhook entirely, use `POST /webhooks` to update the webhook's `enabled` field to `false` instead.
+
+## Query Parameters
+
+<ParamField query="id" type="integer" required>
+  The numeric ID of the webhook you want to delete. You can find webhook IDs in the response from `GET /webhooks` or `POST /webhooks`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` when the deletion completed successfully.
+</ResponseField>
+
+<ResponseField name="deleted" type="boolean">
+  `true` when the webhook record was found and removed.
+</ResponseField>
+
+<ResponseField name="id" type="integer">
+  The ID of the webhook that was deleted, echoed back for confirmation.
+</ResponseField>
+
+## Errors
+
+| Status | Meaning |
+| ------ | ------- |
+| `400`  | The `id` query parameter is missing. |
+| `401`  | Missing or invalid `Authorization` header. |
+| `403`  | Your subscription does not permit webhook deletion. |
+| `404`  | No webhook with the provided `id` was found on your account. |
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl --request DELETE \
+  --url "https://app.wachat.net/api/v1/webhooks?id=12" \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "success": true,
+  "deleted": true,
+  "id": 12
+}
+```
+
+<Warning>
+  Deletion is permanent and cannot be undone. If you need the same webhook configuration again in the future, you will have to recreate it via `POST /webhooks` and store the new signing secret.
+</Warning>
+
+<Tip>
+  If you only want to stop receiving events temporarily — for example during planned maintenance — set `enabled` to `false` via `POST /webhooks` instead of deleting the webhook. That way you can re-enable it without losing the ID or secret.
+</Tip>

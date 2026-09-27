@@ -1,0 +1,105 @@
+---
+title: "Wachat REST API Reference Overview"
+sidebarTitle: "Introduction"
+description: "Learn how to authenticate, format requests, interpret HTTP status codes, and use the interactive playground when building with the Wachat REST API."
+---
+
+The Wachat REST API lets you send WhatsApp messages, manage instances, handle contacts, configure webhooks, and more — all over standard HTTPS. Every request is authenticated with a bearer token, returns JSON, and follows predictable HTTP status code conventions. This page covers everything you need to know before making your first call.
+
+## Base URL
+
+All API requests go to the following base URL. There are no versioned subdomains or environment-specific hosts — production is the only environment.
+
+```text
+https://app.wachat.net/api/v1
+```
+
+## Authentication
+
+You authenticate every request by passing your Wachat API key as a bearer token in the `Authorization` header.
+
+```http
+Authorization: Bearer YOUR_SECRET_TOKEN
+```
+
+<Warning>
+  Keep your API key private. Never expose it in client-side code, public repositories, or logs. If you believe your key has been compromised, regenerate it immediately from your Wachat account settings.
+</Warning>
+
+<Tip>
+  **Testing from these docs:** Every endpoint page has a **Try It** playground on the right side. Paste your API key into the authentication field once, and it persists as you navigate between endpoints — no need to re-enter it for each request.
+</Tip>
+
+## Request Format
+
+All request bodies must be JSON. Set the `Content-Type` header accordingly on any request that includes a body.
+
+```http
+Content-Type: application/json
+```
+
+## The `instanceName` Parameter
+
+Many endpoints require an `instanceName` query parameter or body field to identify which WhatsApp session to use. Always pass the `apiInstanceName` value returned by the instance endpoints — not the human-readable display name you chose when creating the instance.
+
+For example, if you created an instance named `jakarta_store`, the `apiInstanceName` Wachat assigns might look like:
+
+```text
+t1_mq9r2jov_jakarta_store
+```
+
+Use that full string (including the unique prefix) in every subsequent API call. You can retrieve the `apiInstanceName` for any instance by calling `GET /instance/list`.
+
+## Response Format
+
+All responses are JSON objects. A successful response always includes a `success: true` field alongside the requested data. Error responses include a descriptive `error` field and, where applicable, a `reason` code to help you handle the failure programmatically.
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+## HTTP Status Codes
+
+Wachat uses standard HTTP status codes. The table below lists every code you may encounter across the API.
+
+| Code | Meaning | When you'll see it |
+|------|---------|--------------------|
+| `200` | OK | The request succeeded and the response body contains the requested data. |
+| `201` | Created | A new resource (e.g., an instance or webhook) was created successfully. |
+| `400` | Bad Request | The request is missing required parameters or contains an invalid payload. |
+| `401` | Unauthorized | The `Authorization` header is missing or the API key is invalid. |
+| `403` | Forbidden | Your subscription plan does not permit this action. |
+| `404` | Not Found | The requested resource (instance, webhook, contact) does not exist for your account. |
+| `409` | Conflict | The request conflicts with the current state — for example, trying to delete an instance that is still connected. |
+| `500` | Internal Server Error | An unexpected error occurred on Wachat's servers. |
+| `502` | Bad Gateway | Wachat could not reach an upstream service to complete the request. |
+| `504` | Gateway Timeout | The upstream Wachat API did not respond in time. |
+
+## Complete Authenticated Request Example
+
+The example below shows a fully formed `curl` request that sends an authenticated `GET` to the account limits endpoint. Replace `YOUR_SECRET_TOKEN` with your actual API key.
+
+```bash
+curl --request GET \
+  --url https://app.wachat.net/api/v1/account/limits \
+  --header "Authorization: Bearer YOUR_SECRET_TOKEN" \
+  --header "Content-Type: application/json"
+```
+
+For requests with a JSON body — such as sending a message — add `--data` with your payload:
+
+```bash
+curl --request POST \
+  --url https://app.wachat.net/api/v1/send/text \
+  --header "Authorization: Bearer YOUR_SECRET_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "instanceName": "t1_mq9r2jov_jakarta_store",
+    "number": "628123456789",
+    "type": "text",
+    "message": "Hello from the Wachat API!"
+  }'
+```

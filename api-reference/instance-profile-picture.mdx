@@ -1,0 +1,115 @@
+---
+title: "GET /instance/profile-picture — Fetch Profile Photo"
+sidebarTitle: "Profile Picture"
+description: "Stream the connected WhatsApp account's profile photo as a JPEG or PNG image, suitable for browser img tags and server-side downloads."
+---
+
+Once a WhatsApp instance is connected, this endpoint lets you stream its current profile picture directly as a binary image response — no JSON parsing or URL redirection needed. Like the QR image endpoint, it supports both the `Authorization` header and the `apiKey` query parameter so you can use it in browser `<img>` tags as well as server-side code.
+
+## Endpoint
+
+```
+GET https://app.wachat.net/api/v1/instance/profile-picture
+```
+
+## Authentication
+
+You can authenticate this endpoint two ways:
+
+- **Authorization header** — the standard `Bearer` token approach, preferred for server-to-server requests.
+- **`apiKey` query parameter** — required when embedding the URL directly in an HTML `<img>` tag where browsers cannot attach custom headers.
+
+## Query Parameters
+
+<ParamField query="instanceName" type="string" required>
+  The `apiInstanceName` returned when you created the instance (e.g. `t1_mq9r2jov_jakarta_store`).
+</ParamField>
+
+<ParamField query="apiKey" type="string">
+  Your API key for browser-based rendering contexts. For all server-to-server requests, use the `Authorization: Bearer` header instead.
+</ParamField>
+
+## Response
+
+A successful `200` response returns the profile photo as a raw binary image. The `Content-Type` is either `image/jpeg` or `image/png` depending on the format WhatsApp provides.
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Missing `instanceName` query parameter. |
+| `401` | Missing or invalid API key. |
+| `403` | Your subscription plan prevented the profile picture lookup. |
+| `404` | The instance was not found, or the connected account has no profile picture set. |
+| `502` | Wachat could not fetch or load the profile picture from WhatsApp. |
+| `504` | The request to the Wachat API backend timed out. |
+
+## Examples
+
+<CodeGroup>
+
+```bash curl — download to file
+curl -X GET \
+  "https://app.wachat.net/api/v1/instance/profile-picture?instanceName=t1_mq9r2jov_jakarta_store" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  --output profile.jpg
+```
+
+```html Embed in an img tag
+<!-- Use apiKey because browsers cannot send Authorization headers for image src requests -->
+<img
+  src="https://app.wachat.net/api/v1/instance/profile-picture?instanceName=t1_mq9r2jov_jakarta_store&apiKey=YOUR_API_KEY"
+  alt="WhatsApp profile picture"
+  width="96"
+  height="96"
+/>
+```
+
+```javascript Node.js
+const instanceName = "t1_mq9r2jov_jakarta_store";
+const url = `https://app.wachat.net/api/v1/instance/profile-picture?instanceName=${instanceName}`;
+
+const response = await fetch(url, {
+  headers: { Authorization: "Bearer YOUR_API_KEY" },
+});
+
+if (response.status === 404) {
+  console.log("No profile picture found for this instance.");
+} else if (!response.ok) {
+  throw new Error(`Failed to fetch profile picture: ${response.status}`);
+} else {
+  const buffer = await response.arrayBuffer();
+  const contentType = response.headers.get("content-type"); // image/jpeg or image/png
+  console.log(`Received ${buffer.byteLength} bytes as ${contentType}`);
+}
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "https://app.wachat.net/api/v1/instance/profile-picture",
+    headers={"Authorization": "Bearer YOUR_API_KEY"},
+    params={"instanceName": "t1_mq9r2jov_jakarta_store"},
+)
+
+if response.status_code == 200:
+    ext = "jpg" if "jpeg" in response.headers["Content-Type"] else "png"
+    with open(f"profile.{ext}", "wb") as f:
+        f.write(response.content)
+    print("Profile picture saved.")
+elif response.status_code == 404:
+    print("No profile picture available for this instance.")
+else:
+    print(f"Error {response.status_code}: {response.text}")
+```
+
+</CodeGroup>
+
+<Note>
+  A `404` response means either the instance does not exist under your API key, or the connected WhatsApp account has no profile picture. Check `instance.state` with [GET /instance/state](/api-reference/instance-state) to confirm the instance is connected before calling this endpoint.
+</Note>
+
+<Tip>
+  You can also get the profile picture URL as a string field (`profilePictureUrl`) from [GET /instance/state](/api-reference/instance-state) and [GET /instance/list](/api-reference/instance-list) if you only need the URL rather than the raw image bytes.
+</Tip>

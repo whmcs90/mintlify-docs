@@ -1,0 +1,105 @@
+---
+title: "Quickstart: Send a WhatsApp Message via Wachat API"
+sidebarTitle: "Quickstart"
+description: "Send your first WhatsApp message with the Wachat API in three steps: set your token, verify your account limits, then dispatch a text message."
+---
+
+This guide gets you from zero to a delivered WhatsApp message as fast as possible. You only need a Wachat account, your API token, and a terminal. By the end you will have confirmed your account is active and sent a real message to a WhatsApp number.
+
+<Steps>
+  <Step title="Set your API token as an environment variable">
+    Store your token in a shell variable so you don't have to paste it into every command. Open your terminal and run:
+
+    ```bash
+    export WACHAT_API_TOKEN="your_token_here"
+    ```
+
+    Replace `your_token_here` with the token from **Settings → API Keys** in the Wachat dashboard. The variable persists for the life of your current shell session.
+
+    <Note>
+      For production workloads, load the token from a secrets manager or a `.env` file that is excluded from source control. Never hard-code the value in your application code.
+    </Note>
+  </Step>
+
+  <Step title="Check your account limits">
+    Before you send any messages, confirm your subscription is active and your instance quota has room. Call the `/account/limits` endpoint:
+
+    ```bash
+    curl https://app.wachat.net/api/v1/account/limits \
+      -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+      -H "Accept: application/json"
+    ```
+
+    A successful response looks like this:
+
+    ```json
+    {
+      "success": true,
+      "account": {
+        "teamId": 25,
+        "teamName": "Jakarta Team"
+      },
+      "subscription": {
+        "status": "active",
+        "hasAccess": true
+      },
+      "limits": {
+        "instances": {
+          "limit": 3,
+          "used": 1,
+          "remaining": 2,
+          "isLimitReached": false
+        }
+      }
+    }
+    ```
+
+    Check that `subscription.hasAccess` is `true` and that `limits.instances.isLimitReached` is `false` before proceeding.
+
+    <Warning>
+      If you receive a `401 Unauthorized` response, your token is missing or incorrect. Double-check the value of `$WACHAT_API_TOKEN` with `echo $WACHAT_API_TOKEN`.
+    </Warning>
+  </Step>
+
+  <Step title="Send a text message">
+    With a connected instance ready, call `/send/text` to deliver a message. Pass your instance name, the recipient's number in international format, and the message body:
+
+    ```bash
+    curl -X POST https://app.wachat.net/api/v1/send/text \
+      -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "instanceName": "my-instance-01",
+        "number": "628123456789",
+        "type": "text",
+        "message": "Hello from Wachat"
+      }'
+    ```
+
+    | Field | Description |
+    |-------|-------------|
+    | `instanceName` | The API instance name shown in your Wachat dashboard |
+    | `number` | Recipient phone number with country code, no `+` or spaces |
+    | `type` | Must be `"text"` for plain text messages |
+    | `message` | The text to deliver; supports emoji |
+
+    When the request succeeds, Wachat queues the message and returns `200 OK`. The message appears in the recipient's WhatsApp app within seconds.
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you have a working request, explore what else the API can do:
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/guides/authentication">
+    Learn how to secure your token, pass it correctly in every language, and handle common auth errors.
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Browse every endpoint — media messages, carousels, webhooks, instance management, and more.
+  </Card>
+</CardGroup>
+
+<Tip>
+  Use the **API Reference** playground to try any endpoint interactively in your browser — no terminal needed. Just paste your token and fill in the parameters.
+</Tip>

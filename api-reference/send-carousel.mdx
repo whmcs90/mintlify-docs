@@ -1,0 +1,181 @@
+---
+title: "POST /send/carousel — Send a WhatsApp Carousel Message"
+sidebarTitle: "Send Carousel"
+description: "Send a scrollable carousel of rich media cards, each with an image header, body text, and action buttons — perfect for product catalogs and promotions."
+---
+
+The `/send/carousel` endpoint delivers a side-scrolling set of rich media cards directly inside the WhatsApp conversation. Each card in the carousel has an image or video header, a body text description, and one or more action buttons. Recipients swipe through the cards horizontally and tap a button on any card that interests them. Carousels are particularly effective for showcasing product lines, service packages, or promotional offers where multiple options benefit from visual side-by-side comparison.
+
+## Endpoint
+
+```
+POST https://app.wachat.net/api/v1/send/carousel
+```
+
+## Authentication
+
+All requests require a Bearer token in the `Authorization` header.
+
+## Request Body
+
+<ParamField body="instanceName" type="string" required>
+  The `apiInstanceName` of your connected WhatsApp instance, as returned by `POST /instance/create`.
+</ParamField>
+
+<ParamField body="number" type="string" required>
+  The recipient's phone number including the country code, with no `+` sign or spaces. For example, `628123456789`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Must be set to `"interactive"`. All interactive message types share this top-level type.
+</ParamField>
+
+<ParamField body="interactive" type="object" required>
+  The interactive carousel payload containing the introductory text and card definitions.
+
+  <Expandable title="interactive object fields">
+    <ParamField body="type" type="string" required>
+      Must be `"carousel"` to render the horizontal card slider layout.
+    </ParamField>
+
+    <ParamField body="cards" type="array" required>
+      An array of card objects that make up the carousel. Each card contains:
+
+      - `header` (object, required):
+        - `type` (string) — the media type; typically `"image"`
+        - `mediaUrl` (string) — a publicly accessible URL pointing to the card's header image or video
+
+      - `body` (string, required) — the descriptive text displayed below the card's header image
+
+      - `buttons` (array, required) — one or more action buttons on the card, each with:
+        - `buttonId` (string) — a unique identifier returned when the button is tapped
+        - `buttonText.displayText` (string) — the visible button label
+        - `type` (integer) — button type identifier
+    </ParamField>
+
+    <ParamField body="body" type="string">
+      Optional introductory text rendered above the carousel card strip. Use this to set context before the recipient starts browsing the cards.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="delay" type="integer">
+  Typing simulation duration in milliseconds. Defaults to a random value between 3,000 ms and 5,000 ms if omitted.
+</ParamField>
+
+## Example
+
+The following example sends a web services catalog carousel with two cards — one for a SaaS development package and one for a VPS setup service.
+
+<CodeGroup>
+
+```json Request Body
+{
+  "instanceName": "my-instance-01",
+  "number": "628123456789",
+  "type": "interactive",
+  "interactive": {
+    "type": "carousel",
+    "body": "Here is our web services catalog:",
+    "cards": [
+      {
+        "header": {
+          "type": "image",
+          "mediaUrl": "https://cdn.pixabay.com/photo/2022/09/23/09/13/promotion-7474039_1280.png"
+        },
+        "body": "Paket Kilat Pembuatan SaaS Modern",
+        "buttons": [
+          {
+            "buttonId": "c_saas",
+            "buttonText": {
+              "displayText": "Take Promotion"
+            },
+            "type": 1
+          }
+        ]
+      },
+      {
+        "header": {
+          "type": "image",
+          "mediaUrl": "https://cdn.pixabay.com/photo/2022/07/21/13/18/computer-7336233_1280.png"
+        },
+        "body": "Setup VPS & CloudPanel",
+        "buttons": [
+          {
+            "buttonId": "c_vps",
+            "buttonText": {
+              "displayText": "Consultation"
+            },
+            "type": 2
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```bash cURL
+curl -X POST https://app.wachat.net/api/v1/send/carousel \
+  -H "Authorization: Bearer $WACHAT_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instanceName": "my-instance-01",
+    "number": "628123456789",
+    "type": "interactive",
+    "interactive": {
+      "type": "carousel",
+      "body": "Here is our web services catalog:",
+      "cards": [
+        {
+          "header": {
+            "type": "image",
+            "mediaUrl": "https://cdn.pixabay.com/photo/2022/09/23/09/13/promotion-7474039_1280.png"
+          },
+          "body": "Paket Kilat Pembuatan SaaS Modern",
+          "buttons": [
+            {
+              "buttonId": "c_saas",
+              "buttonText": { "displayText": "Take Promotion" },
+              "type": 1
+            }
+          ]
+        },
+        {
+          "header": {
+            "type": "image",
+            "mediaUrl": "https://cdn.pixabay.com/photo/2022/07/21/13/18/computer-7336233_1280.png"
+          },
+          "body": "Setup VPS & CloudPanel",
+          "buttons": [
+            {
+              "buttonId": "c_vps",
+              "buttonText": { "displayText": "Consultation" },
+              "type": 2
+            }
+          ]
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Response
+
+A `200 OK` response confirms the carousel message was accepted and queued for delivery.
+
+```json
+{
+  "status": "success"
+}
+```
+
+<Tip>
+  Use consistent image dimensions and aspect ratios across all cards in a carousel. Inconsistent image sizes cause cards to render at different heights, which looks unpolished and can confuse recipients as they swipe through.
+</Tip>
+
+<Note>
+  Each card's `buttonId` is returned in the webhook payload when a recipient taps a button. The webhook payload also identifies which card the button belonged to, so you can route the interaction correctly even when multiple cards share similarly named buttons.
+</Note>

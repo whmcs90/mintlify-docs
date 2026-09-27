@@ -1,0 +1,124 @@
+{
+  "projectType": "api-service",
+  "projectName": "Wachat",
+  "projectDescription": "Wachat is a WhatsApp messaging API that lets developers send rich messages, manage WhatsApp instances, and receive real-time webhook events through a single REST API.",
+  "theme": "luma",
+  "primaryColor": "#2b79a7",
+  "lightColor": "#ffffff",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "introduction",
+              "guides/quickstart",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/instances",
+              "guides/sending-messages",
+              "guides/webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/account-limits"
+            ]
+          },
+          {
+            "group": "Instances",
+            "pages": [
+              "api-reference/instance-create",
+              "api-reference/instance-list",
+              "api-reference/instance-state",
+              "api-reference/instance-qr-image",
+              "api-reference/instance-profile-picture",
+              "api-reference/instance-logout",
+              "api-reference/instance-delete"
+            ]
+          },
+          {
+            "group": "Messages",
+            "pages": [
+              "api-reference/send-text",
+              "api-reference/send-media",
+              "api-reference/send-button",
+              "api-reference/send-list",
+              "api-reference/send-cta",
+              "api-reference/send-carousel",
+              "api-reference/send-location",
+              "api-reference/send-poll",
+              "api-reference/send-group"
+            ]
+          },
+          {
+            "group": "Contacts & Groups",
+            "pages": [
+              "api-reference/contacts",
+              "api-reference/check-number",
+              "api-reference/groups"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks",
+              "api-reference/webhooks-create",
+              "api-reference/webhooks-delete"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Send text, media, buttons, lists, carousels, polls, location, and CTA messages via REST API",
+    "Create and manage WhatsApp instances with QR-code authentication",
+    "Real-time webhooks for incoming messages, delivery updates, and connection events",
+    "Verify phone numbers on the WhatsApp network before sending",
+    "List and search CRM contacts per instance",
+    "Retrieve and broadcast to WhatsApp groups",
+    "Account plan, quota, and subscription status endpoint",
+    "Bearer token authentication with interactive API playground"
+  ],
+  "publicApiSurface": [
+    "GET  /account/limits",
+    "GET  /check-number",
+    "GET  /contacts",
+    "GET  /groups",
+    "POST /send/text",
+    "POST /send/media",
+    "POST /send/button",
+    "POST /send/list",
+    "POST /send/cta",
+    "POST /send/carousel",
+    "POST /send-location",
+    "POST /send-poll",
+    "POST /send-group",
+    "POST /instance/create",
+    "GET  /instance/list",
+    "GET  /instance/state",
+    "GET  /instance/qr/image",
+    "GET  /instance/profile-picture",
+    "DELETE /instance/logout",
+    "DELETE /instance/delete",
+    "GET  /webhooks",
+    "POST /webhooks",
+    "DELETE /webhooks"
+  ]
+}

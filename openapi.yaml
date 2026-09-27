@@ -1,0 +1,2110 @@
+openapi: 3.0.3
+
+info:
+  title: Wachat Enterprise API
+  description: |
+    Welcome to the official Wachat API reference. Wachat provides developer-friendly, ultra-reliable infrastructure to scale your WhatsApp communications programmatically.
+
+    Easily deploy automated messaging pipelines, orchestrate interactive customer engagement patterns, verify phone numbers instantly, and control containerized WhatsApp instances via a secure, production-grade REST architecture.
+  version: 1.0.0
+
+servers:
+  - url: https://app.wachat.net/api/v1
+    description: Live Production Gateway
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /account/limits:
+    get:
+      summary: Get Account Limits
+      description: Return the authenticated account plan, subscription status, current usage, limits, and enabled features.
+      tags:
+        - Account
+
+      responses:
+        '200':
+          description: Account limits returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  account:
+                    type: object
+                    properties:
+                      teamId:
+                        type: integer
+                        example: 25
+
+                      teamName:
+                        type: string
+                        example: Jakarta Team
+
+                  plan:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        nullable: true
+                        example: 2
+
+                      name:
+                        type: string
+                        nullable: true
+                        example: Pro
+
+                      interval:
+                        type: string
+                        nullable: true
+                        example: month
+
+                      currency:
+                        type: string
+                        nullable: true
+                        example: usd
+
+                      amount:
+                        type: integer
+                        nullable: true
+                        example: 2900
+
+                  subscription:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: active
+
+                      hasAccess:
+                        type: boolean
+                        example: true
+
+                      isExpired:
+                        type: boolean
+                        example: false
+
+                      isTrial:
+                        type: boolean
+                        example: false
+
+                      isCancelled:
+                        type: boolean
+                        example: false
+
+                      isPending:
+                        type: boolean
+                        example: false
+
+                      isPastDue:
+                        type: boolean
+                        example: false
+
+                      effectiveExpiry:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: '2026-07-13T08:00:00.000Z'
+
+                      currentPeriodEnd:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: '2026-07-13T08:00:00.000Z'
+
+                      trialEndsAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: null
+
+                      expiresAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: null
+
+                  limits:
+                    type: object
+                    properties:
+                      users:
+                        $ref: '#/components/schemas/UsageLimit'
+
+                      contacts:
+                        $ref: '#/components/schemas/UsageLimit'
+
+                      instances:
+                        $ref: '#/components/schemas/UsageLimit'
+
+                      messages:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/UsageLimit'
+
+                  features:
+                    type: object
+                    properties:
+                      ai:
+                        type: boolean
+                        example: true
+
+                      flowBuilder:
+                        type: boolean
+                        example: true
+
+                      campaigns:
+                        type: boolean
+                        example: true
+
+                      templates:
+                        type: boolean
+                        example: true
+
+                      voiceCalls:
+                        type: boolean
+                        example: false
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented account limit lookup.
+
+        '500':
+          description: Internal server error.
+
+  /check-number:
+    get:
+      summary: Verify WhatsApp Contact Registration
+      description: Perform an instant validation check on a destination phone number to determine if it is actively registered on the WhatsApp network before executing your messaging payloads.
+      tags:
+        - Network Validation
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: The unique identifier string assigned to your active session instance.
+
+        - in: query
+          name: number
+          required: true
+          schema:
+            type: string
+          description: The recipient's phone number formatted with the international country code (e.g., 628123456789).
+
+      responses:
+        '200':
+          description: Verification lookup completed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+
+                  data:
+                    type: object
+                    properties:
+                      exists:
+                        type: boolean
+                        description: Indication of whether the target is registered on WhatsApp.
+
+                      jid:
+                        type: string
+                        description: The unique WhatsApp Jabber ID (JID) assigned to the contact.
+
+                      number:
+                        type: string
+                        description: The verified canonical phone number.
+
+                      instance:
+                        type: string
+                        description: The session instance handling this lookup.
+
+  /contacts:
+    get:
+      summary: List Contacts
+      description: Return saved CRM contacts for a specific WhatsApp instance. Contacts are filtered by the API instance name so contacts from other instances are never mixed into the response.
+      tags:
+        - Contacts
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Unique API instance name returned by Wachat.
+          example: t1_mq9r2jov_jakarta_store
+
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+          description: Optional search text. Matches contact name, phone/JID, chat name, or push name.
+          example: John
+
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number.
+          example: 1
+
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+          description: Number of contacts per page. Maximum 100.
+          example: 50
+
+        - in: query
+          name: includeGroups
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include group chats saved as contacts.
+          example: false
+
+      responses:
+        '200':
+          description: Contacts returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  count:
+                    type: integer
+                    example: 1
+
+                  total:
+                    type: integer
+                    example: 1
+
+                  page:
+                    type: integer
+                    example: 1
+
+                  limit:
+                    type: integer
+                    example: 50
+
+                  hasMore:
+                    type: boolean
+                    example: false
+
+                  instance:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 29
+
+                      instanceName:
+                        type: string
+                        description: Display name shown in Wachat.
+                        example: jakarta_store
+
+                      displayName:
+                        type: string
+                        example: jakarta_store
+
+                      apiInstanceName:
+                        type: string
+                        description: Unique API instance name to use in future API calls.
+                        example: t1_mq9r2jov_jakarta_store
+
+                      internalName:
+                        type: string
+                        example: t1_mq9r2jov_jakarta_store
+
+                  contacts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 101
+
+                        name:
+                          type: string
+                          example: John Customer
+
+                        phone:
+                          type: string
+                          nullable: true
+                          example: '628123456789'
+
+                        remoteJid:
+                          type: string
+                          example: 628123456789@s.whatsapp.net
+
+                        isGroup:
+                          type: boolean
+                          example: false
+
+                        profilePicUrl:
+                          type: string
+                          nullable: true
+                          example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                        profilePictureUrl:
+                          type: string
+                          nullable: true
+                          example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                        chat:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 501
+
+                            name:
+                              type: string
+                              nullable: true
+                              example: John Customer
+
+                            pushName:
+                              type: string
+                              nullable: true
+                              example: John
+
+                            lastMessageText:
+                              type: string
+                              nullable: true
+                              example: Hello
+
+                            lastMessageTimestamp:
+                              type: string
+                              nullable: true
+                              format: date-time
+                              example: '2026-06-13T08:00:00.000Z'
+
+                            unreadCount:
+                              type: integer
+                              example: 0
+
+                        assignedUserId:
+                          type: integer
+                          nullable: true
+                          example: null
+
+                        assignedDepartmentId:
+                          type: integer
+                          nullable: true
+                          example: null
+
+                        funnelStageId:
+                          type: integer
+                          nullable: true
+                          example: null
+
+                        notes:
+                          type: string
+                          nullable: true
+                          example: null
+
+                        customData:
+                          type: object
+                          example: {}
+
+                        showTimeInStage:
+                          type: boolean
+                          example: false
+
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: '2026-06-13T08:00:00.000Z'
+
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: '2026-06-13T08:00:00.000Z'
+
+        '400':
+          description: Missing instanceName query parameter.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented contacts lookup.
+
+        '404':
+          description: Instance not found for this API key.
+
+        '500':
+          description: Internal server error.
+
+  /webhooks:
+    get:
+      summary: List Webhooks
+      description: Return webhook endpoints configured for the authenticated Wachat account. Optionally filter by API instance name.
+      tags:
+        - Webhooks
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: false
+          schema:
+            type: string
+          description: Optional API instance name to filter webhooks by instance.
+          example: t1_mq9r2jov_jakarta_store
+
+      responses:
+        '200':
+          description: Webhooks returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  count:
+                    type: integer
+                    example: 1
+
+                  webhooks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebhookSubscription'
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented webhook lookup.
+
+        '404':
+          description: Instance not found for this API key.
+
+    post:
+      summary: Create or Update Webhook
+      description: Create a new webhook endpoint, or update an existing webhook by passing its id.
+      tags:
+        - Webhooks
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                id:
+                  type: integer
+                  description: Existing webhook id. Include this to update a webhook.
+                  example: 12
+
+                name:
+                  type: string
+                  example: Production webhook
+
+                url:
+                  type: string
+                  description: HTTPS endpoint that will receive Wachat webhook deliveries.
+                  example: https://example.com/wachat/webhook
+
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - '*'
+                      - messages.upsert
+                      - messages.update
+                      - contacts.update
+                      - chats.update
+                      - qrcode.updated
+                      - connection.update
+                  example:
+                    - messages.upsert
+                    - connection.update
+
+                instanceName:
+                  type: string
+                  description: Optional API instance name. Omit this to receive events for all instances in the account.
+                  example: t1_mq9r2jov_jakarta_store
+
+                enabled:
+                  type: boolean
+                  default: true
+                  example: true
+
+                secret:
+                  type: string
+                  description: Optional custom webhook secret. If omitted, Wachat generates one.
+                  example: whsec_your_custom_secret
+
+      responses:
+        '200':
+          description: Webhook updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  webhook:
+                    $ref: '#/components/schemas/WebhookSubscription'
+
+        '201':
+          description: Webhook created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  webhook:
+                    $ref: '#/components/schemas/WebhookSubscription'
+
+        '400':
+          description: Invalid payload, unsupported event, or non-HTTPS URL.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented webhook creation.
+
+        '404':
+          description: Instance or webhook not found.
+
+    delete:
+      summary: Delete Webhook
+      description: Delete a webhook endpoint by id.
+      tags:
+        - Webhooks
+
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Webhook id.
+          example: 12
+
+      responses:
+        '200':
+          description: Webhook deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  deleted:
+                    type: boolean
+                    example: true
+
+                  id:
+                    type: integer
+                    example: 12
+
+        '400':
+          description: Missing webhook id.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented webhook deletion.
+
+        '404':
+          description: Webhook not found.
+
+  /send/text:
+    post:
+      summary: Dispatch Conversational Text Message
+      description: Transmit standard text payloads with support for markdown layout formats and organic, human-mimicking typing delays to guarantee high delivery retention.
+      tags:
+        - Core Messaging Engine
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - message
+
+              properties:
+                instanceName:
+                  type: string
+                  description: The specific active connection token identifying your WhatsApp instance.
+                  example: "my-instance-01"
+
+                number:
+                  type: string
+                  description: Target phone number with international country code routing.
+                  example: "628123456789"
+
+                type:
+                  type: string
+                  enum:
+                    - text
+                  description: Explicit message category specifier. Must be set strictly to `text`.
+                  example: "text"
+
+                message:
+                  type: string
+                  description: Textual content body supporting emojis and system message parameters.
+                  example: "Halo, terima kasih telah menghubungi kami!"
+
+                delay:
+                  type: integer
+                  description: Simulated human typing duration configured in milliseconds. If omitted, the engine automatically defaults to a natural 3000ms to 5000ms randomized interval.
+                  example: 1000
+
+      responses:
+        '200':
+          description: Conversational text message successfully processed and queued for dispatch.
+
+  /send/media:
+    post:
+      summary: Dispatch Rich Media Attachments
+      description: Stream high-fidelity rich media assets including documents, audio files, images, and marketing videos directly to recipients along with automated typing simulation workflows.
+      tags:
+        - Core Messaging Engine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - mediaUrl
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Name of your connected WhatsApp session profile.
+
+                number:
+                  type: string
+                  description: Target phone number with international country code routing.
+
+                type:
+                  type: string
+                  enum:
+                    - image
+                    - video
+                    - document
+                    - audio
+                  description: Supported structural file classification standard.
+                  example: "image"
+
+                mediaUrl:
+                  type: string
+                  format: uri
+                  description: The direct fully qualified URL endpoint hosting your media asset.
+                  example: "https://cdn.pixabay.com/photo/2022/09/23/09/13/promotion-7474039_1280.png"
+
+                message:
+                  type: string
+                  description: Contextual rich text descriptive caption elements accompanied with media assets (ignored for audio payloads).
+                  example: "Check out this month exciting promotions!"
+
+                fileName:
+                  type: string
+                  description: Explicit file attachment naming convention overlay. Strongly recommended for structural documents.
+                  example: "promotion-7474039_1280.png"
+
+                mimetype:
+                  type: string
+                  description: Explicit custom Multipurpose Internet Mail Extensions header format definition overlay.
+                  example: "image/png"
+
+                delay:
+                  type: integer
+                  description: Custom simulated typing delay parameter in milliseconds. If left empty, it runs an organic 3-5 seconds random engine delay.
+
+      responses:
+        '200':
+          description: Media payload processed and dispatched through the cloud instance infrastructure.
+
+  /send/carousel:
+    post:
+      summary: Dispatch Interactive Carousel UI Component
+      description: Launch highly interactive, side-scrolling horizontal promotional card arrays equipped with contextual call-to-action buttons for maximized digital conversions.
+      tags:
+        - High-Conversion UI Modules
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - interactive
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Name of your connected WhatsApp session profile.
+
+                number:
+                  type: string
+                  description: Target phone number with international country code routing.
+
+                type:
+                  type: string
+                  enum:
+                    - interactive
+                  description: Set this strictly to `interactive`.
+                  example: "interactive"
+
+                delay:
+                  type: integer
+                  description: Custom time delay configuration before rendering the structural carousel cards.
+
+                interactive:
+                  type: object
+
+                  required:
+                    - type
+                    - cards
+
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - carousel
+                      description: UI component block schema selector context.
+                      example: "carousel"
+
+                    body:
+                      type: string
+                      description: Primary introductory copy text context rendered directly above the sliding card frame layout.
+                      example: "Here is our web services catalog:"
+
+                    cards:
+                      type: array
+                      description: Matrix listing specific multi-card content parameters and action response setups.
+
+                      items:
+                        type: object
+
+                      example:
+                        - header:
+                            type: image
+                            mediaUrl: https://cdn.pixabay.com/photo/2022/09/23/09/13/promotion-7474039_1280.png
+                          body: Paket Kilat Pembuatan SaaS Modern
+                          buttons:
+                            - buttonId: c_saas
+                              buttonText:
+                                displayText: Take Promotion
+                              type: 1
+
+                        - header:
+                            type: image
+                            mediaUrl: https://cdn.pixabay.com/photo/2022/07/21/13/18/computer-7336233_1280.png
+                          body: Setup VPS & CloudPanel
+                          buttons:
+                            - buttonId: c_vps
+                              buttonText:
+                                displayText: Consultation
+                              type: 2
+
+      responses:
+        '200':
+          description: Complex sliding carousel matrix successfully structured and delivered to user interface.
+
+  /send/button:
+    post:
+      summary: Dispatch Quick Reply Buttons
+      description: Streamline quick micro-actions and conversational branches by transmitting clean interactive prompt cards carrying up to three actionable tap-to-reply button components.
+      tags:
+        - High-Conversion UI Modules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - interactive
+
+              properties:
+                instanceName:
+                  type: string
+                  description: The uniquely assigned name specifying your active cloud instance session.
+                  example: "my-instance-01"
+
+                number:
+                  type: string
+                  description: Target recipient international mobile number.
+                  example: "628123456789"
+
+                type:
+                  type: string
+                  enum:
+                    - interactive
+                  description: Explicitly configure message grouping structure to `interactive`.
+                  example: "interactive"
+
+                delay:
+                  type: integer
+                  description: Fine-tune simulated organic system delay response limits in milliseconds.
+                  example: 123
+
+                interactive:
+                  type: object
+
+                  required:
+                    - type
+                    - body
+                    - buttons
+
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - button
+                      description: UI rendering design selector context.
+                      example: "button"
+
+                    title:
+                      type: string
+                      description: Header caption bolded text at the crown position of the interactive card component block.
+                      example: "Confirm Attendance"
+
+                    body:
+                      type: string
+                      description: Core text containing instructions or questions positioned above the button selections.
+                      example: "Will you be attending the event tomorrow morning?"
+
+                    footer:
+                      type: string
+                      description: Subtle lower brand anchor text or automated message legal notice values.
+                      example: "Wachat"
+
+                    buttons:
+                      type: array
+                      description: Array layout config defining your options structure. Strict limit of 3 interactive nodes.
+                      minItems: 1
+                      maxItems: 3
+                      items:
+                        type: object
+                        required:
+                          - buttonId
+                          - buttonText
+                          - type
+                        properties:
+                          buttonId:
+                            type: string
+                            description: Unique identifier returned when the user taps this button.
+                            example: "btn_yes"
+
+                          buttonText:
+                            type: object
+                            required:
+                              - displayText
+                            properties:
+                              displayText:
+                                type: string
+                                description: Visible label displayed on the button.
+                                example: "Yes, I m Coming"
+
+                          type:
+                            type: integer
+                            description: Button type identifier.
+                            example: 1
+
+              example:
+                instanceName: "my-instance-01"
+                number: "628123456789"
+                type: "interactive"
+                interactive:
+                  type: "button"
+                  title: "Confirm Attendance"
+                  body: "Will you be attending the event tomorrow morning?"
+                  footer: "Wachat"
+                  buttons:
+                    - buttonId: "btn_yes"
+                      buttonText:
+                        displayText: "Yes, I m Coming"
+                      type: 1
+                    - buttonId: "btn_no"
+                      buttonText:
+                        displayText: "Sorry, Unable to attend"
+                      type: 2
+                delay: 1000
+
+      responses:
+        '200':
+          description: Quick reply components rendered and transmitted successfully.
+  
+  /send/cta:
+    post:
+      summary: Dispatch Call to Action (CTA) Formats
+      description: Direct transaction pipelines effectively by serving contextual messages that contain automated triggers to launch outbound hyperlinks or click-to-dial customer support lines.
+      tags:
+        - High-Conversion UI Modules
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - interactive
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Target instance configuration identity path label.
+
+                number:
+                  type: string
+                  description: Target destination phone string with international parameters.
+
+                type:
+                  type: string
+                  enum:
+                    - interactive
+                  description: Configure core layout envelope to `interactive`.
+                  example: "interactive"
+
+                delay:
+                  type: integer
+                  description: Simulated system typing simulation latency config defined in milliseconds.
+
+                interactive:
+                  type: object
+
+                  required:
+                    - type
+                    - body
+                    - buttons
+
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - cta
+                      description: Select core UI component structural blueprint layout format.
+                      example: "cta"
+
+                    title:
+                      type: string
+                      description: Main title text banner of the CTA block.
+                      example: "New Wachat.net Service"
+
+                    body:
+                      type: string
+                      description: Core explanatory contextual message copy.
+                      example: "Visit our landing page or contact our sales team now."
+
+                    footer:
+                      type: string
+                      description: Subtle brand watermark text layout element at the bottom edge.
+                      example: "Powered by Wachat"
+
+                    buttons:
+                      type: array
+                      description: Matrix grouping click-to-call nodes and automated URI external routing references.
+
+                      items:
+                        type: object
+
+                      example:
+                        - index: 1
+                          urlButton:
+                            displayText: Visit
+                            url: https://www.wachat.net
+
+                        - index: 2
+                          callButton:
+                            displayText: Contact us
+                            phoneNumber: "+62812345678"
+
+      responses:
+        '200':
+          description: Call-to-Action transactional button modules successfully deployed.
+
+  /send/list:
+    post:
+      summary: Dispatch Multi-Row List Selection Menu
+      description: Package granular menus, service catalogs, or support pathways beautifully inside a compact single-toggle floating drawer element that opens structured choices on user interaction.
+      tags:
+        - High-Conversion UI Modules
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - type
+                - interactive
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Connected target session instance system path identity key.
+
+                number:
+                  type: string
+                  description: Target mobile recipient parameters with structural international context.
+
+                type:
+                  type: string
+                  enum:
+                    - interactive
+                  description: Configure component container to `interactive`.
+                  example: "interactive"
+
+                delay:
+                  type: integer
+                  description: Custom organic response processing delay settings in milliseconds.
+
+                interactive:
+                  type: object
+
+                  required:
+                    - type
+                    - title
+                    - text
+                    - buttonText
+                    - sections
+
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - list
+                      description: Establish targeted layout logic context configuration exclusively to `list`.
+                      example: "list"
+
+                    title:
+                      type: string
+                      description: Top header structural element designation text string.
+                      example: "Digital Service Center"
+
+                    text:
+                      type: string
+                      description: Primary description body content context mapping.
+                      example: "Please select one of the available consultation sessions below:"
+
+                    footerText:
+                      type: string
+                      description: Lower margins text label string format setting.
+                      example: "Flobamora Solusi Digital"
+
+                    buttonText:
+                      type: string
+                      description: Label text printed on the interactive list toggle component button.
+                      example: "View All Sessions"
+
+                    sections:
+                      type: array
+                      description: Multi-dimensional object grouping choice rows structurally into categorical segments.
+
+                      items:
+                        type: object
+
+                      example:
+                        - title: Schedule Options
+                          rows:
+                            - title: Morning Session
+                              description: 09:00 - 12:00 PM
+                              rowId: sesi_1
+
+                            - title: Sesi Siang
+                              description: 13:00 - 16:00 AM
+                              rowId: sesi_2
+
+      responses:
+        '200':
+          description: Multi-tiered structured choice component list menu sent successfully.
+
+  /send-group:
+    post:
+      summary: Dispatch Group Channel Broadcast
+      description: Broadcast text updates and notification streams directly to a specific community target channel using standard group JID references.
+      tags:
+        - Mass Channel Orchestration
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - groupJid
+                - message
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Name of your connected WhatsApp session profile.
+
+                groupJid:
+                  type: string
+                  description: The absolute group channel Jabber ID string parameter format (e.g., 12036312345678@g.us).
+
+                message:
+                  type: string
+                  description: The text content of the group message.
+
+      responses:
+        '200':
+          description: Channel message distributed to group members.
+
+  /send-location:
+    post:
+      summary: Dispatch Geographic Coordinate Location Pin
+      description: Push physical business coordinates, pickup points, or dynamic navigation location maps using live geometric markers directly into real-time conversation flows.
+      tags:
+        - Contextual Utilities
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - latitude
+                - longitude
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Name of your connected WhatsApp session profile.
+
+                number:
+                  type: string
+                  description: Destination client contact phone data format string.
+
+                latitude:
+                  type: number
+                  description: The precise mapping geographic Latitude coordinate property.
+
+                longitude:
+                  type: number
+                  description: The precise mapping geographic Longitude coordinate property.
+
+                name:
+                  type: string
+                  description: Named location title label (e.g., Head Office / Store Branch).
+
+                address:
+                  type: string
+                  description: Full alphanumeric street physical address metadata properties.
+
+      responses:
+        '200':
+          description: Location point data successfully parsed and pushed.
+
+  /send-poll:
+    post:
+      summary: Dispatch Interactive Real-Time Polls
+      description: Engage users and aggregate instantly actionable response feedback data loops by deploying structured real-time interactive choice survey components.
+      tags:
+        - High-Conversion UI Modules
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+
+              required:
+                - instanceName
+                - number
+                - pollName
+                - options
+                - selectableCount
+
+              properties:
+                instanceName:
+                  type: string
+                  description: Name of your connected WhatsApp session profile.
+
+                number:
+                  type: string
+                  description: Destination channel target phone route parameter.
+
+                pollName:
+                  type: string
+                  description: The main survey query question or statement text.
+
+                options:
+                  type: array
+                  description: Collection array mapping multiple choice answer options.
+
+                  items:
+                    type: string
+
+                selectableCount:
+                  type: integer
+                  description: Maximum count limit restriction designating total valid selectable check answers allowed per voter profile.
+
+      responses:
+        '200':
+          description: Interactive polling layout distributed successfully.
+
+  /groups:
+    get:
+      summary: Retrieve All Connected Groups
+      description: Scrape, retrieve, and map complete structured lists including names, configuration metadata profiles, and unique JIDs of all channels your instance profile resides in.
+      tags:
+        - Mass Channel Orchestration
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: The designated tracking name representing your active connection runtime session.
+
+      responses:
+        '200':
+          description: Collection array containing structural channel groups metadata pulled.
+
+  /instance/create:
+    post:
+      summary: Create WhatsApp Instance
+      description: Create a new WhatsApp instance from an external application. The created instance is saved to your Wachat account and appears automatically in Settings > Instance. WhatsApp Baileys instances return a QR code in the same response.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: response
+          required: false
+          schema:
+            type: string
+            enum:
+              - json
+              - image
+            default: json
+          description: Set to image to return the QR code directly as image/png instead of JSON.
+          example: image
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - instanceName
+              properties:
+                instanceName:
+                  type: string
+                  description: Friendly instance name. Wachat will add a unique prefix before saving the final instance name.
+                  example: jakarta_store
+
+                number:
+                  type: string
+                  description: Optional WhatsApp phone number with country code.
+                  example: '628123456789'
+
+                integration:
+                  type: string
+                  description: Instance integration type.
+                  enum:
+                    - WHATSAPP-BAILEYS
+                    - WHATSAPP-BUSINESS
+                  default: WHATSAPP-BAILEYS
+                  example: WHATSAPP-BAILEYS
+
+                rejectCalls:
+                  type: boolean
+                  description: Reject incoming WhatsApp calls automatically.
+                  example: false
+
+                ignoreGroups:
+                  type: boolean
+                  description: Ignore group messages for this instance.
+                  example: false
+
+                alwaysOnline:
+                  type: boolean
+                  description: Keep the instance online when possible.
+                  example: true
+
+                readMessages:
+                  type: boolean
+                  description: Mark incoming messages as read.
+                  example: false
+
+                readStatus:
+                  type: boolean
+                  description: Read status updates.
+                  example: false
+
+                metaToken:
+                  type: string
+                  description: Required only for WHATSAPP-BUSINESS integrations.
+
+                metaBusinessId:
+                  type: string
+                  description: Required only for WHATSAPP-BUSINESS integrations.
+
+                metaPhoneNumberId:
+                  type: string
+                  description: Required only for WHATSAPP-BUSINESS integrations.
+
+            examples:
+              baileys:
+                summary: Create a WhatsApp Baileys instance
+                value:
+                  instanceName: jakarta_store
+                  number: '628123456789'
+                  integration: WHATSAPP-BAILEYS
+
+      responses:
+        '201':
+          description: Instance created successfully. For WhatsApp Baileys, the QR code is returned immediately.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  instance:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 26
+
+                      instanceName:
+                        type: string
+                        description: Display name shown in Wachat.
+                        example: jakarta_store
+
+                      displayName:
+                        type: string
+                        example: jakarta_store
+
+                      apiInstanceName:
+                        type: string
+                        description: Unique instance name used for future Wachat API requests.
+                        example: t1_mq9r2jov_jakarta_store
+
+                      internalName:
+                        type: string
+                        description: Same value as apiInstanceName.
+                        example: t1_mq9r2jov_jakarta_store
+
+                      number:
+                        type: string
+                        example: '628123456789'
+
+                      integration:
+                        type: string
+                        example: WHATSAPP-BAILEYS
+
+                  qrcode:
+                    type: object
+                    nullable: true
+                    description: QR code data returned for WhatsApp Baileys instances.
+                    properties:
+                      pairingCode:
+                        type: string
+                        nullable: true
+                        example: PKRFWHWE
+
+                      code:
+                        type: string
+                        nullable: true
+
+                      base64:
+                        type: string
+                        nullable: true
+                        description: Base64 image data URI. Use this value as an image src to display the QR code.
+                        example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
+
+                      imageUrl:
+                        type: string
+                        nullable: true
+                        description: URL that returns the QR code directly as an image. Add apiKey as a query parameter when using it inside an img tag.
+                        example: https://app.wachat.net/api/v1/instance/qr/image?instanceName=t1_mq9r2jov_jakarta_store
+
+                      liveUrl:
+                        type: string
+                        nullable: true
+                        description: URL that returns a live HTML QR page. Add apiKey as a query parameter when using it inside an iframe.
+                        example: https://app.wachat.net/api/v1/instance/qr/live?instanceName=t1_mq9r2jov_jakarta_store
+
+                      count:
+                        type: integer
+                        nullable: true
+                        example: 1
+
+                  qrError:
+                    type: string
+                    nullable: true
+                    description: Present when the instance was created but the QR code could not be fetched.
+                    example: null
+
+        '400':
+          description: Invalid request payload.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription, limit, or channel restriction prevented instance creation.
+
+        '502':
+          description: The Wachat API could not create the instance or return a valid instance ID.
+
+  /instance/list:
+    get:
+      summary: List WhatsApp Instances
+      description: Return all WhatsApp instances that belong to the authenticated Wachat account, including display name, API instance name, connection status, number, and profile data when available.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      responses:
+        '200':
+          description: Instance list returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  count:
+                    type: integer
+                    example: 1
+
+                  instances:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 29
+
+                        instanceName:
+                          type: string
+                          description: Display name shown in Wachat.
+                          example: jakarta_store
+
+                        displayName:
+                          type: string
+                          description: Display name shown in Wachat.
+                          example: jakarta_store
+
+                        apiInstanceName:
+                          type: string
+                          description: Unique API instance name to use in future API calls.
+                          example: t1_mq9r2jov_jakarta_store
+
+                        internalName:
+                          type: string
+                          description: Internal API instance name. Same value as apiInstanceName.
+                          example: t1_mq9r2jov_jakarta_store
+
+                        state:
+                          type: string
+                          example: open
+
+                        status:
+                          type: string
+                          example: open
+
+                        isConnected:
+                          type: boolean
+                          example: true
+
+                        number:
+                          type: string
+                          nullable: true
+                          example: '628123456789'
+
+                        profileName:
+                          type: string
+                          nullable: true
+                          example: jakarta_store
+
+                        profilePictureUrl:
+                          type: string
+                          nullable: true
+                          example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                        profilePicUrl:
+                          type: string
+                          nullable: true
+                          description: Alias of profilePictureUrl.
+                          example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                        owner:
+                          type: string
+                          nullable: true
+                          example: 628123456789@s.whatsapp.net
+
+                        integration:
+                          type: string
+                          example: WHATSAPP-BAILEYS
+
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: '2026-06-13T08:00:00.000Z'
+
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: '2026-06-13T08:00:00.000Z'
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented instance list lookup.
+
+        '500':
+          description: Internal server error.
+
+  /instance/qr/image:
+    get:
+      summary: Get Instance QR Image
+      description: Return the QR code directly as an image/png response. This is useful for browser previews, documentation pages, and img tags. You can authenticate using the Authorization bearer header or the apiKey query parameter.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Final unique instance name returned by Wachat.
+          example: t1_mq9r2jov_jakarta_store
+
+        - in: query
+          name: apiKey
+          required: false
+          schema:
+            type: string
+          description: Optional API key for direct browser image rendering. Prefer Authorization bearer header for server-to-server requests.
+          example: YOUR_API_KEY
+
+      responses:
+        '200':
+          description: QR code image returned successfully.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+        '400':
+          description: Missing instanceName query parameter.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented QR generation.
+
+        '404':
+          description: Instance not found for this API key.
+
+        '409':
+          description: QR code is only available for WhatsApp Baileys instances.
+
+        '502':
+          description: Failed to fetch or decode the QR code image.
+
+        '504':
+          description: Wachat API request timed out.
+
+  /instance/state:
+    get:
+      summary: Get Instance State
+      description: Check whether a WhatsApp instance is connected. Send the unique API instance name in the query parameter. When the instance is connected, the normalized response includes the display name, API instance name, detected WhatsApp number, and profile information when available.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Unique API instance name returned by Wachat. Use apiInstanceName from the create or state response.
+          example: t1_mq9r2jov_jakarta_store
+
+      responses:
+        '200':
+          description: Instance state returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  data:
+                    type: object
+                    description: Raw state payload returned by Wachat. This may contain the internal API instance name.
+                    properties:
+                      instance:
+                        type: object
+                        properties:
+                          instanceName:
+                            type: string
+                            example: t1_mq9r2jov_jakarta_store
+
+                          state:
+                            type: string
+                            example: open
+
+                  instance:
+                    type: object
+                    description: Normalized instance state and profile data for UI and API usage.
+                    properties:
+                      instanceName:
+                        type: string
+                        description: Display name shown in Wachat. This is safe to show in your UI.
+                        example: jakarta_store
+
+                      apiInstanceName:
+                        type: string
+                        description: Unique API instance name to use in future API calls.
+                        example: t1_mq9r2jov_jakarta_store
+
+                      internalName:
+                        type: string
+                        description: Internal API instance name.
+                        example: t1_mq9r2jov_jakarta_store
+
+                      state:
+                        type: string
+                        example: open
+
+                      profileName:
+                        type: string
+                        nullable: true
+                        description: Connected WhatsApp profile name. If WhatsApp returns the internal API name, Wachat normalizes this to the display name.
+                        example: jakarta_store
+
+                      profilePictureUrl:
+                        type: string
+                        nullable: true
+                        description: WhatsApp profile picture URL when returned by WhatsApp.
+                        example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                      profilePicUrl:
+                        type: string
+                        nullable: true
+                        description: Alias of profilePictureUrl.
+                        example: https://pps.whatsapp.net/v/t61.24694-24/example.jpg
+
+                      number:
+                        type: string
+                        nullable: true
+                        example: '628123456789'
+
+                      owner:
+                        type: string
+                        nullable: true
+                        example: 628123456789@s.whatsapp.net
+
+                      integration:
+                        type: string
+                        nullable: true
+                        example: WHATSAPP-BAILEYS
+
+        '400':
+          description: Missing instanceName query parameter.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented state lookup.
+
+        '404':
+          description: Instance not found for this API key.
+
+        '500':
+          description: Internal server error.
+
+  /instance/profile-picture:
+    get:
+      summary: Get Instance Profile Picture
+      description: Return the connected WhatsApp profile picture directly as an image. You can authenticate using the Authorization bearer header or the apiKey query parameter for browser image rendering.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Final unique API instance name returned by Wachat.
+          example: t1_mq9r2jov_jakarta_store
+
+        - in: query
+          name: apiKey
+          required: false
+          schema:
+            type: string
+          description: Optional API key for direct browser image rendering. Prefer Authorization bearer header for server-to-server requests.
+          example: YOUR_API_KEY
+
+      responses:
+        '200':
+          description: Profile picture image returned successfully.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+        '400':
+          description: Missing instanceName query parameter.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented profile picture lookup.
+
+        '404':
+          description: Instance or profile picture not found.
+
+        '502':
+          description: Could not fetch or load the profile picture.
+
+        '504':
+          description: Wachat API request timed out.
+
+  /instance/logout:
+    delete:
+      summary: Terminate Instance Authentication Session
+      description: Gracefully execute remote instance logout workflows to sever session sockets, clear local instance configurations, and detach mobile nodes securely from your instance framework.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Name string tracking handle mapping your connected active instance container profile.
+
+      responses:
+        '200':
+          description: Token storage arrays safely destroyed and instance safely offline.
+
+        '400':
+          description: Missing instanceName query parameter.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '404':
+          description: Instance not found for this API key.
+
+        '502':
+          description: Failed to logout the instance on the Wachat API.
+
+  /instance/delete:
+    delete:
+      summary: Delete WhatsApp Instance
+      description: Delete a WhatsApp instance from your Wachat account. The instance must be logged out before deletion. If the instance is still connected, this endpoint returns 409 Conflict.
+      tags:
+        - Session Lifecycle Infrastructure
+
+      parameters:
+        - in: query
+          name: instanceName
+          required: true
+          schema:
+            type: string
+          description: Final unique instance name returned by Wachat.
+          example: t1_mq9r2jov_jakarta_store
+
+      responses:
+        '200':
+          description: Instance deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+                  message:
+                    type: string
+                    example: Instance deleted successfully.
+
+                  instance:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 26
+
+                      instanceName:
+                        type: string
+                        example: t1_mq9r2jov_jakarta_store
+
+                      displayName:
+                        type: string
+                        nullable: true
+                        example: jakarta_store
+
+                  connectionState:
+                    type: string
+                    description: Last connection state detected before deletion.
+                    example: close
+
+                  instanceDeleted:
+                    type: boolean
+                    description: Whether the instance delete request succeeded.
+                    example: true
+
+                  instanceMissing:
+                    type: boolean
+                    description: True when the instance was already missing from the Wachat API.
+                    example: false
+
+        '400':
+          description: Missing instanceName query parameter or unsupported integration.
+
+        '401':
+          description: Missing or invalid API key.
+
+        '403':
+          description: Subscription restriction prevented instance deletion.
+
+        '404':
+          description: Instance not found for this API key.
+
+        '409':
+          description: Instance is still connected or not safely logged out.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+
+                  error:
+                    type: string
+                    example: Instance must be logged out before deletion.
+
+                  reason:
+                    type: string
+                    example: instance_still_connected
+
+                  connectionState:
+                    type: string
+                    example: open
+
+        '502':
+          description: Could not verify state or delete the instance.
+
+        '504':
+          description: Wachat API request timed out.
+
+components:
+  schemas:
+    UsageLimit:
+      type: object
+      properties:
+        limit:
+          oneOf:
+            - type: integer
+            - type: string
+          example: 3
+
+        used:
+          type: integer
+          example: 1
+
+        remaining:
+          oneOf:
+            - type: integer
+            - type: string
+          example: 2
+
+        isLimitReached:
+          type: boolean
+          example: false
+
+    WebhookSubscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+
+        name:
+          type: string
+          nullable: true
+          example: Production webhook
+
+        url:
+          type: string
+          example: https://example.com/wachat/webhook
+
+        events:
+          type: array
+          items:
+            type: string
+          example:
+            - messages.upsert
+            - connection.update
+
+        enabled:
+          type: boolean
+          example: true
+
+        secret:
+          type: string
+          description: Masked in list responses. Returned in full when creating or updating a webhook.
+          example: whsec_••••abcdef
+
+        instance:
+          type: object
+          nullable: true
+          properties:
+            instanceName:
+              type: string
+              example: jakarta_store
+
+            displayName:
+              type: string
+              example: jakarta_store
+
+            apiInstanceName:
+              type: string
+              example: t1_mq9r2jov_jakarta_store
+
+            internalName:
+              type: string
+              example: t1_mq9r2jov_jakarta_store
+
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-06-13T08:00:00.000Z'
+
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-06-13T08:00:00.000Z'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Authenticate your integration payloads by injecting your premium secure Wachat Account API Private Secret Key inside standard Authorization Bearer header vectors.
